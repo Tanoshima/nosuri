@@ -1,0 +1,12 @@
+.devenv/
+.devenv.flake.nix
+.direnv/
+__pycache__/
+*.pyc
+.env
+.env.local
+
+temp.md
+
+# Claude Code local settings
+.claude/settings.local.json

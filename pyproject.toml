@@ -1,0 +1,10 @@
+[project]
+name = "nosuri"
+version = "0.0.0"
+description = "Open-data ingestion scripts for the nosuri map service"
+requires-python = ">=3.14"
+dependencies = [
+    "psycopg2-binary",
+    "requests",
+    "python-dotenv",
+]
