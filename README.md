@@ -10,28 +10,28 @@ A personal search & map service for long-lasting places — historic sites, geos
 | Backend | Go (REST API, image processing, OD batch jobs) |
 | Frontend | React SPA (`react-leaflet`, PWA) |
 | Data ingestion | Python (open-data fetchers) |
-| Local dev | Devcontainer + [devenv](https://devenv.sh/) (Nix) |
+| Local dev | Devcontainer + Nix flake (`nix-direnv`) |
 | Production (planned) | AWS — RDS (PostGIS), ECS / App Runner, S3 |
 
 ## Local Development Environment
 
-The development environment is fully reproducible via a devcontainer powered by Nix / devenv. Open the project in VS Code and choose **Reopen in Container** — that's it.
+The development environment is fully reproducible via a devcontainer powered by Nix. Open the project in VS Code and choose **Reopen in Container** — that's it.
 
 ### What runs inside the container
 
-- **Image**: `ghcr.io/cachix/devenv/devcontainer:latest` (Nix + devenv preinstalled)
-- **PostgreSQL 16 + PostGIS**: started automatically via `devenv up` on container start, listening on `127.0.0.1:5432`
-- **Python 3.14** managed by [uv](https://docs.astral.sh/uv/) (deps in `pyproject.toml`, locked in `uv.lock`); `uv sync` runs automatically on shell entry
+- **Image**: `ghcr.io/cachix/devenv/devcontainer:latest` (used as a Nix base; devenv itself is no longer used)
+- **PostgreSQL 16 + PostGIS**: started in the background on container start via `pg-up`, listening on `127.0.0.1:5432`
+- **Python 3.14** managed by [uv](https://docs.astral.sh/uv/) (deps in `pyproject.toml`, locked in `uv.lock`); `uv sync` runs automatically on shell entry; venv at `.venv/`
 - **Claude Code** (`claude` CLI) — host's `~/.claude` is bind-mounted into the container so login state is preserved
-- **direnv** auto-activation of the devenv shell
+- **direnv + nix-direnv** auto-activation of the flake dev shell
 
 ### File layout
 
 ```
 .devcontainer/devcontainer.json   # Devcontainer definition
-devenv.yaml                       # devenv inputs (nixpkgs)
-devenv.nix                        # Environment + services definition
-.envrc                            # direnv ↔ devenv glue
+.devcontainer/postCreate.sh       # Installs nix-direnv, wires direnv hook
+flake.nix                         # Dev shell + pg-up / pg-down scripts
+.envrc                            # `use flake` + PATH_add bin
 db/init.sql                       # PostGIS extension setup
 pyproject.toml                    # Python project + dependencies (managed by uv)
 uv.lock                           # uv lockfile (committed for reproducibility)
@@ -40,7 +40,7 @@ scripts/                          # Open-data ingestion scripts (Python)
 
 ### Connecting to the database
 
-The following environment variables are exported automatically inside the devenv shell:
+The following environment variables are exported automatically inside the dev shell:
 
 | Variable | Value |
 |---|---|
@@ -49,12 +49,13 @@ The following environment variables are exported automatically inside the devenv
 | `PGPORT` | `5432` |
 | `PGDATABASE` | `nosuri` |
 | `PGUSER` | `postgres` |
+| `PGDATA` | `$PWD/.local/state/postgres` |
 
 ### Useful commands (inside the container)
 
 ```bash
-devenv up                # Start PostgreSQL (auto-run on container start)
-devenv shell             # Enter the devenv shell manually
+pg-up                    # Start PostgreSQL (auto-run on container start)
+pg-down                  # Stop PostgreSQL
 psql $DATABASE_URL       # Connect to the database
 uv add <package>         # Add a Python dependency (updates pyproject.toml + uv.lock)
 uv run python <file>.py  # Run a Python script in the project venv

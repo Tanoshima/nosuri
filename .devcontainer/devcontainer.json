@@ -5,7 +5,8 @@
   "mounts": [
     "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind,consistency=cached"
   ],
-  "postStartCommand": "nohup devenv up > /tmp/devenv.log 2>&1 &",
+  "postCreateCommand": ".devcontainer/postCreate.sh",
+  "postStartCommand": "nohup nix develop -c pg-up > /tmp/pg.log 2>&1 &",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -17,7 +18,7 @@
         "mtxr.sqltools-driver-pg"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.devenv/state/venv/bin/python"
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python"
       }
     }
   }

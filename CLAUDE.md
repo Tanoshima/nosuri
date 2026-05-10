@@ -12,18 +12,21 @@ User communication and the product brief are in Japanese. Code, identifiers, and
 
 ## Development environment
 
-The devcontainer auto-starts PostgreSQL 16 + PostGIS via `devenv up` on container start. The devenv shell is auto-activated by direnv on `cd` into the project root, so commands below are typically run as-is in any terminal inside the container.
+The devcontainer provides a Nix flake-based dev shell, auto-activated by direnv (via `nix-direnv`) on `cd` into the project root. PostgreSQL is **not** auto-started — run `pg-up` to start it (and `pg-down` to stop). On container start, `pg-up` is run automatically in the background.
 
-`DATABASE_URL` and `PG{HOST,PORT,DATABASE,USER}` are exported by devenv automatically — no `.env` file is needed for local DB access.
+`DATABASE_URL` and `PG{HOST,PORT,DATABASE,USER}` are exported by the flake's `shellHook` automatically — no `.env` file is needed for local DB access. `PGDATA` points to `.local/state/postgres` inside the project.
 
-Common commands:
-- `devenv up` — start PostgreSQL (already auto-run on container start)
+Common commands (inside the dev shell):
+- `pg-up` — initialize (first time) and start PostgreSQL, create the `nosuri` DB and apply `db/init.sql`
+- `pg-down` — stop PostgreSQL
 - `psql $DATABASE_URL` — connect to the database
 - `uv run python scripts/<file>.py` — run an ingestion script in the project venv
 
-Python dependencies are managed by [uv](https://docs.astral.sh/uv/). `uv sync` runs automatically on shell entry; the venv lives at `.devenv/state/venv`. To add a dependency: `uv add <package>` (updates `pyproject.toml` and `uv.lock`). Do not edit the venv directly with `pip`.
-To change PostgreSQL configuration or extensions: edit `devenv.nix` under `services.postgres`.
-SQL run on first cluster initialization lives in `db/init.sql` (currently enables `postgis` and `postgis_topology`). It does **not** re-run on existing clusters — to apply changes after the DB exists, drop the cluster (`rm -rf .devenv/state/postgres`) or run the SQL manually.
+Python dependencies are managed by [uv](https://docs.astral.sh/uv/). `uv sync` runs automatically on shell entry; the venv lives at `.venv/`. To add a dependency: `uv add <package>` (updates `pyproject.toml` and `uv.lock`). Do not edit the venv directly with `pip`.
+
+To change the dev shell (packages, env vars, postgres extensions): edit `flake.nix`. PostgreSQL extensions are configured via `pkgs.postgresql_16.withPackages`.
+
+SQL run by `pg-up` on first DB creation lives in `db/init.sql` (currently enables `postgis` and `postgis_topology`). It does **not** re-run if the DB already exists — to apply changes, either run the SQL manually (`psql $DATABASE_URL -f db/init.sql`) or reset the cluster (`pg-down && rm -rf .local/state/postgres && pg-up`).
 
 ## Architecture notes
 
