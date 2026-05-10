@@ -31,6 +31,25 @@ direnv によって `cd` するだけで devenv shell が有効化されるた�
 - ターミナルを開けば `DATABASE_URL` などの環境変数が自動でセット済み
 - Python venv も自動有効化済み（`which python` で確認可）
 
+### CLI からコンテナに入るショートカット（任意）
+
+ホストから `devcontainer exec --workspace-folder . zsh` を毎回打つのが面倒なら、プロジェクト直下に `bin/in` を置いて direnv で PATH に追加できます。
+
+`bin/in`（実行権限を付与）:
+
+```bash
+#!/usr/bin/env bash
+exec devcontainer exec --workspace-folder "$(git rev-parse --show-toplevel)" zsh "$@"
+```
+
+`.envrc` に追記:
+
+```bash
+PATH_add bin
+```
+
+`direnv allow` で承認後、プロジェクト配下にいる間だけ `in` というコマンドでコンテナに入れます。`bin/` は gitignore 済みなので、コマンド名やシェル（`bash` 等）は好みで変更可。
+
 ---
 
 ## 環境を更新する
@@ -163,6 +182,7 @@ devenv up
 | `.devcontainer/**` | ✅ する |
 | `.devenv/`, `.direnv/` | ❌ しない（gitignore 済） |
 | `.claude/settings.local.json` | ❌ しない（gitignore 済） |
+| `bin/` | ❌ しない（個人用ヘルパー、gitignore 済） |
 | `.claude/skills/` | プロジェクト共有用なら ✅ |
 
 ---

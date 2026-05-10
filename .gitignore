@@ -10,3 +10,6 @@ temp.md
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Personal helper scripts
+bin/
