@@ -7,6 +7,13 @@
   ],
   "postCreateCommand": ".devcontainer/postCreate.sh",
   "postStartCommand": "nohup nix develop -c pg-up > /tmp/pg.log 2>&1 &",
+  "forwardPorts": [5432],
+  "portsAttributes": {
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    }
+  },
   "customizations": {
     "vscode": {
       "extensions": [

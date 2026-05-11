@@ -51,6 +51,12 @@ The following environment variables are exported automatically inside the dev sh
 | `PGUSER` | `postgres` |
 | `PGDATA` | `$PWD/.local/state/postgres` |
 
+Access methods:
+
+- **`psql` (CLI)** — inside the dev shell, `psql $DATABASE_URL`.
+- **SQLTools (VS Code)** — pre-installed in the devcontainer (`mtxr.sqltools` + `mtxr.sqltools-driver-pg`). Add a PostgreSQL connection with host `127.0.0.1`, port `5432`, database `nosuri`, user `postgres`, password empty (the cluster is configured with `trust` auth for local connections).
+- **GUI clients on the host** (DBeaver, TablePlus, Postico, pgAdmin, etc.) — the devcontainer forwards port `5432` to the host, so connect to `localhost:5432` with the same credentials as above.
+
 ### Useful commands (inside the container)
 
 ```bash

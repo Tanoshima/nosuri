@@ -139,11 +139,80 @@ uv がこの制約に従って自動で適切な Python を取得します。fla
 
 ### 接続
 
+PostgreSQL は cluster 側で `trust` 認証になっているため、ローカル接続にパスワードは不要です。接続情報は以下で固定：
+
+| 項目 | 値 |
+|---|---|
+| host | `127.0.0.1` （ホスト GUI からは `localhost`） |
+| port | `5432` |
+| database | `nosuri` |
+| user | `postgres` |
+| password | （空欄） |
+
+#### A. コンテナ内 CLI（`psql`）
+
 ```bash
 psql $DATABASE_URL
 ```
 
-VS Code を使う場合は SQLTools 拡張（devcontainer に同梱）からも接続可。
+`pgcli` 等を使いたければ `flake.nix` の `packages` に `pkgs.pgcli` を追加するだけで dev shell に入る（「CLI ツールを追加」参照）。
+
+#### B. コンテナ内 GUI（VS Code SQLTools）
+
+devcontainer に `mtxr.sqltools` + `mtxr.sqltools-driver-pg` が同梱済み。サイドバーの SQLTools アイコンから **Add New Connection → PostgreSQL** を選び、上記の接続情報を入力。`Use password` は **Use empty password** を選択。
+
+プロジェクト全体で共有したい場合は `.vscode/settings.json` に `sqltools.connections` を書いてコミットしてもよい。
+
+#### C. ホスト側 GUI クライアント（DBeaver / TablePlus / Postico / pgAdmin など）
+
+`.devcontainer/devcontainer.json` の `forwardPorts: [5432]` でコンテナの 5432 をホストへ転送している。ホスト OS から `localhost:5432` に上記の接続情報で繋げる。
+
+- VS Code から開いている場合は **PORTS** タブに `5432 (PostgreSQL)` が出るのを確認
+- `devcontainer` CLI 派の場合は `devcontainer up` 時に同様に転送される（CLI 版は dockershim 経由なのでホスト OS から `localhost:5432` でアクセス可能）
+- ポートが既にホストで使われていると衝突する。ホスト側の PostgreSQL を止めるか、devcontainer.json の `forwardPorts` を `"5432:15432"` 形式に書き換えてホスト側だけポートを変える
+
+> セキュリティメモ：cluster は `listen_addresses = '127.0.0.1'` かつ `trust` 認証。devcontainer の port forward は localhost 経由のみで外部公開はされないが、本番／共有環境にこの設定を持ち込まないこと。
+
+### データの永続化とバックアップ
+
+PostgreSQL のデータ実体は `$PWD/.local/state/postgres`（= `PGDATA`）。これはコンテナ内の任意ディレクトリではなく **ホストのワークスペースのバインドマウント上** にあるため、以下の操作ではデータは消えない：
+
+- `pg-down` / `pg-up`
+- コンテナ再起動、`Rebuild Container`、`Rebuild Container Without Cache`
+- VS Code ウィンドウ／devcontainer のリロード
+
+逆に **消えるパターン**：
+
+- `rm -rf .local/state/postgres`（上記「DB を完全リセット」）
+- プロジェクトディレクトリごと削除、別マシンに移動、別ロケーションで clone し直し
+- ホストマシン自体の喪失
+
+`.local/` は gitignore 済みなので git では追跡されない。**マシン跨ぎ／チーム共有でデータを残したいなら明示的にダンプを取る**こと。
+
+#### バックアップ戦略（データ種別ごと）
+
+- **Raw テーブル**（オープンデータの 1:1 ミラー）— バックアップ不要。`scripts/` の ingestion を冪等に保ち、失ったら再取得する方針。
+- **Main テーブル**（手作業の編集を含む）— `pg_dump` でファイルに落として保存。
+- **マシン跨ぎ用シード** — 小さければ `db/seed.sql` としてコミット、大きければ S3 等の外部ストレージに dump を置く。
+
+#### `pg_dump` / `pg_restore`
+
+```bash
+# バックアップ（カスタム形式：高速、選択リストア可、要 pg_restore）
+mkdir -p backups
+pg_dump -Fc $DATABASE_URL -f backups/nosuri_$(date +%Y%m%d_%H%M%S).dump
+
+# プレーン SQL（人間可読、psql で適用）
+pg_dump $DATABASE_URL > backups/nosuri_$(date +%Y%m%d).sql
+
+# 復元（カスタム形式から既存 DB へ）
+pg_restore -d $DATABASE_URL --clean --if-exists backups/nosuri_xxx.dump
+
+# 復元（プレーン SQL）
+psql $DATABASE_URL -f backups/nosuri_xxx.sql
+```
+
+`backups/` を作る場合は `.gitignore` に追加すること（ダンプは大きくなりがち、かつ機密が混じる可能性がある）。
 
 ### スキーマ変更（`db/init.sql` 編集後）
 

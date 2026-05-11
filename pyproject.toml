@@ -8,3 +8,17 @@ dependencies = [
     "requests",
     "python-dotenv",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "responses>=0.26.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.hatch.build.targets.wheel]
+packages = ["nosuri"]
+
