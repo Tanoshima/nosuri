@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 import responses
 
-from nosuri import jps_item
+from ingest import jps_item
 
 
 SAMPLE_RESPONSE = {

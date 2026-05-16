@@ -20,7 +20,7 @@ import psycopg2
 # Ensure the repo root is on sys.path when invoked as a script.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from nosuri import db, jps  # noqa: E402
+from ingest import db, jps  # noqa: E402
 
 
 DEFAULT_TYPES = ["史跡", "史跡名勝天然記念物等", "名勝", "天然記念物"]

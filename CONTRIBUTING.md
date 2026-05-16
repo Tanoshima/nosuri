@@ -30,7 +30,7 @@ direnv によって `cd` するだけで flake の dev shell が有効化され�
 
 - コンテナ起動時に `nohup nix develop -c pg-up &` がバックグラウンドで走り PostgreSQL が起動（ログは `/tmp/pg.log`）
 - ターミナルを開けば direnv 経由で `DATABASE_URL` などの環境変数が自動でセット済み
-- Python venv (`.venv/`) も `uv sync` で自動有効化済み（`which python` で確認可）
+- Python venv (`ingest/.venv/`) も `uv sync` で自動有効化済み（`cd ingest && which python` で確認可）
 
 ### CLI からコンテナに入るショートカット（任意）
 
@@ -59,18 +59,20 @@ nix flake update
 
 ### Python ライブラリを追加・更新
 
-[uv](https://docs.astral.sh/uv/) で管理しています。dev shell に入った時点で `uv sync` が自動実行され、venv は `.venv/` に作られます。
+[uv](https://docs.astral.sh/uv/) で管理しています。Python 関連一式は `ingest/` 配下にあります（`pyproject.toml`、`uv.lock`、`ingest/` パッケージ、`scripts/`、`tests/`、`.venv/`）。dev shell に入った時点で `(cd ingest && uv sync)` が自動実行されます。
 
 ```bash
+cd ingest                    # uv コマンドは ingest/ 配下で実行
 uv add requests              # 依存を追加（pyproject.toml と uv.lock を更新）
 uv add --dev pytest          # 開発用依存（dependency-groups.dev）に追加
 uv remove requests           # 削除
 uv sync                      # 手動で同期（通常は自動実行されるので不要）
 uv lock --upgrade            # ロックファイルを最新版に更新
 uv run python scripts/foo.py # venv 内で実行
+uv run pytest                # テスト実行
 ```
 
-`pyproject.toml` を直接編集してもよいが、その場合は `uv lock` でロックを再生成すること。`uv.lock` は **コミット対象**。
+`ingest/pyproject.toml` を直接編集してもよいが、その場合は `uv lock` でロックを再生成すること。`ingest/uv.lock` は **コミット対象**。
 
 ### CLI ツールを追加（Nix 経由）
 
@@ -124,7 +126,7 @@ flake には devenv のような宣言的なサービス管理機構はないた
 
 ### Python のバージョンを上げる
 
-`pyproject.toml` の `requires-python` を編集：
+`ingest/pyproject.toml` の `requires-python` を編集：
 
 ```toml
 [project]
@@ -191,7 +193,7 @@ PostgreSQL のデータ実体は `$PWD/.local/state/postgres`（= `PGDATA`）。
 
 #### バックアップ戦略（データ種別ごと）
 
-- **Raw テーブル**（オープンデータの 1:1 ミラー）— バックアップ不要。`scripts/` の ingestion を冪等に保ち、失ったら再取得する方針。
+- **Raw テーブル**（オープンデータの 1:1 ミラー）— バックアップ不要。`ingest/scripts/` の ingestion を冪等に保ち、失ったら再取得する方針。
 - **Main テーブル**（手作業の編集を含む）— `pg_dump` でファイルに落として保存。
 - **マシン跨ぎ用シード** — 小さければ `db/seed.sql` としてコミット、大きければ S3 等の外部ストレージに dump を置く。
 
@@ -243,10 +245,10 @@ pg-up
 | `flake.nix` | ✅ する |
 | `flake.lock` | ✅ する（再現性のため） |
 | `.envrc` | ✅ する |
-| `pyproject.toml`, `uv.lock` | ✅ する |
+| `ingest/pyproject.toml`, `ingest/uv.lock` | ✅ する |
 | `db/*.sql` | ✅ する |
 | `.devcontainer/**` | ✅ する |
-| `.direnv/`, `.local/`, `.venv/` | ❌ しない（gitignore 済） |
+| `.direnv/`, `.local/`, `ingest/.venv/` | ❌ しない（gitignore 済） |
 | `.claude/settings.local.json` | ❌ しない（gitignore 済） |
 | `bin/` | ❌ しない（個人用ヘルパー、gitignore 済） |
 | `.claude/skills/` | プロジェクト共有用なら ✅ |

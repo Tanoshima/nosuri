@@ -21,7 +21,7 @@ The development environment is fully reproducible via a devcontainer powered by 
 
 - **Image**: `ghcr.io/cachix/devenv/devcontainer:latest` (used as a Nix base; devenv itself is no longer used)
 - **PostgreSQL 16 + PostGIS**: started in the background on container start via `pg-up`, listening on `127.0.0.1:5432`
-- **Python 3.14** managed by [uv](https://docs.astral.sh/uv/) (deps in `pyproject.toml`, locked in `uv.lock`); `uv sync` runs automatically on shell entry; venv at `.venv/`
+- **Python 3.14** managed by [uv](https://docs.astral.sh/uv/) (deps in `ingest/pyproject.toml`, locked in `ingest/uv.lock`); `uv sync` runs automatically on shell entry; venv at `ingest/.venv/`
 - **Claude Code** (`claude` CLI) — host's `~/.claude` is bind-mounted into the container so login state is preserved
 - **direnv + nix-direnv** auto-activation of the flake dev shell
 
@@ -32,10 +32,12 @@ The development environment is fully reproducible via a devcontainer powered by 
 .devcontainer/postCreate.sh       # Installs nix-direnv, wires direnv hook
 flake.nix                         # Dev shell + pg-up / pg-down scripts
 .envrc                            # `use flake` + PATH_add bin
-db/init.sql                       # PostGIS extension setup
-pyproject.toml                    # Python project + dependencies (managed by uv)
-uv.lock                           # uv lockfile (committed for reproducibility)
-scripts/                          # Open-data ingestion scripts (Python)
+db/init.sql                       # PostGIS extension setup (shared, language-agnostic)
+ingest/pyproject.toml             # Python project + dependencies (managed by uv)
+ingest/uv.lock                    # uv lockfile (committed for reproducibility)
+ingest/ingest/                    # Python package (DB helpers, JPS clients)
+ingest/scripts/                   # Open-data ingestion scripts (Python)
+ingest/tests/                     # pytest suite
 ```
 
 ### Connecting to the database
@@ -60,11 +62,11 @@ Access methods:
 ### Useful commands (inside the container)
 
 ```bash
-pg-up                    # Start PostgreSQL (auto-run on container start)
-pg-down                  # Stop PostgreSQL
-psql $DATABASE_URL       # Connect to the database
-uv add <package>         # Add a Python dependency (updates pyproject.toml + uv.lock)
-uv run python <file>.py  # Run a Python script in the project venv
+pg-up                              # Start PostgreSQL (auto-run on container start)
+pg-down                            # Stop PostgreSQL
+psql $DATABASE_URL                 # Connect to the database
+cd ingest && uv add <package>      # Add a Python dependency (updates pyproject.toml + uv.lock)
+cd ingest && uv run python <file>  # Run a Python script in the project venv
 ```
 
 ## Data Strategy

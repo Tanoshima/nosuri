@@ -20,9 +20,11 @@ Common commands (inside the dev shell):
 - `pg-up` — initialize (first time) and start PostgreSQL, create the `nosuri` DB and apply `db/init.sql`
 - `pg-down` — stop PostgreSQL
 - `psql $DATABASE_URL` — connect to the database
-- `uv run python scripts/<file>.py` — run an ingestion script in the project venv
+- `cd ingest && uv run python scripts/<file>.py` — run an ingestion script in the project venv
 
-Python dependencies are managed by [uv](https://docs.astral.sh/uv/). `uv sync` runs automatically on shell entry; the venv lives at `.venv/`. To add a dependency: `uv add <package>` (updates `pyproject.toml` and `uv.lock`). Do not edit the venv directly with `pip`.
+All Python code (package, scripts, tests, `pyproject.toml`, `uv.lock`) lives under `ingest/`. The root is reserved for cross-language concerns (`db/`, `flake.nix`, docs, devcontainer); future Go/React code will sit alongside `ingest/` (e.g. `api/`, `web/`).
+
+Python dependencies are managed by [uv](https://docs.astral.sh/uv/). `uv sync` runs automatically on shell entry against `ingest/pyproject.toml`; the venv lives at `ingest/.venv/`. To add a dependency: `cd ingest && uv add <package>` (updates `ingest/pyproject.toml` and `ingest/uv.lock`). Do not edit the venv directly with `pip`.
 
 To change the dev shell (packages, env vars, postgres extensions): edit `flake.nix`. PostgreSQL extensions are configured via `pkgs.postgresql_16.withPackages`.
 

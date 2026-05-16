@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from nosuri import db
+from ingest import db
 
 
 @pytest.fixture

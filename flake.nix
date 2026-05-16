@@ -79,8 +79,8 @@
               export PGUSER="postgres"
               export PGDATA="$PWD/.local/state/postgres"
 
-              if [ -f pyproject.toml ] && command -v uv >/dev/null; then
-                uv sync --quiet 2>/dev/null || true
+              if [ -f ingest/pyproject.toml ] && command -v uv >/dev/null; then
+                (cd ingest && uv sync --quiet) 2>/dev/null || true
               fi
             '';
           };

@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from nosuri import db
+from ingest import db
 
 
 @pytest.fixture

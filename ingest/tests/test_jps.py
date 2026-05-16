@@ -6,7 +6,7 @@ import json
 import pytest
 import responses
 
-from nosuri import jps
+from ingest import jps
 
 
 SAMPLE_RESPONSE = {
