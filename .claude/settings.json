@@ -3,6 +3,14 @@
   "permissions": {
     "defaultMode": "bypassPermissions",
     "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Edit(.env)",
+      "Edit(.env.*)",
+      "Edit(**/.env)",
+      "Edit(**/.env.*)",
       "Bash(git push --force*)",
       "Bash(git push -f*)",
       "Bash(git push --force-with-lease*)",
@@ -39,7 +47,10 @@
       "Bash(rm -rf ~*)",
       "Bash(sudo *)",
       "Bash(dd *)",
-      "Bash(find * -delete)"
+      "Bash(find * -delete)",
+      "Bash(pkill *)",
+      "Bash(kill *)",
+      "Bash(killall *)"
     ]
   }
 }
