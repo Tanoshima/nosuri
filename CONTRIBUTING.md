@@ -32,18 +32,16 @@ direnv によって `cd` するだけで flake の dev shell が有効化され�
 - ターミナルを開けば direnv 経由で `DATABASE_URL` などの環境変数が自動でセット済み
 - Python venv (`ingest/.venv/`) も `uv sync` で自動有効化済み（`cd ingest && which python` で確認可）
 
-### CLI からコンテナに入るショートカット（任意）
+### CLI からコンテナに入るショートカット
 
-ホストから `devcontainer exec --workspace-folder . zsh` を毎回打つのが面倒なら、プロジェクト直下に `bin/in` を置いて direnv で PATH に追加できます。
-
-`bin/in`（実行権限を付与）:
+ホストから `devcontainer exec --workspace-folder . zsh` を毎回打つのが面倒なら、リポジトリ同梱の `bin/devcontainer-exec` が使えます。`.envrc` に `PATH_add bin` が記載済みなので、`direnv allow` 後はプロジェクト配下にいる間だけ `devcontainer-exec` コマンドでコンテナに入れます（コンテナ未起動なら `devcontainer up` も自動で行います）。
 
 ```bash
-#!/usr/bin/env bash
-exec devcontainer exec --workspace-folder "$(git rev-parse --show-toplevel)" zsh "$@"
+devcontainer-exec          # コンテナに入る（zsh）
+devcontainer-exec -c "..."  # 引数は in-container の zsh にそのまま渡る
 ```
 
-`.envrc` には既に `PATH_add bin` が記載済み。`direnv allow` で承認後、プロジェクト配下にいる間だけ `in` というコマンドでコンテナに入れます。`bin/` は gitignore 済みなので、コマンド名やシェル（`bash` 等）は好みで変更可。
+`bin/` 配下のその他のファイルは gitignore 済みなので、個人用のヘルパースクリプトを置く場所としても使えます（共有したいツールは `.gitignore` で個別に un-ignore する）。
 
 ---
 
@@ -250,7 +248,8 @@ pg-up
 | `.devcontainer/**` | ✅ する |
 | `.direnv/`, `.local/`, `ingest/.venv/` | ❌ しない（gitignore 済） |
 | `.claude/settings.local.json` | ❌ しない（gitignore 済） |
-| `bin/` | ❌ しない（個人用ヘルパー、gitignore 済） |
+| `bin/devcontainer-exec` | ✅ する（共有ツール） |
+| `bin/` のその他 | ❌ しない（個人用ヘルパー、gitignore 済） |
 | `.claude/skills/` | プロジェクト共有用なら ✅ |
 
 ---

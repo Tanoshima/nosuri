@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Bring up the project devcontainer (if needed) and open a shell inside it.
+# Available as `devcontainer-exec` while inside the project (.envrc runs PATH_add bin).
+# Any arguments are passed through to the in-container zsh.
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+devcontainer up --workspace-folder "$root"
+exec devcontainer exec --workspace-folder "$root" zsh "$@"

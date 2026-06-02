@@ -11,5 +11,6 @@ temp.md
 # Claude Code local settings
 .claude/settings.local.json
 
-# Personal helper scripts
-bin/
+# Personal helper scripts (bin/ is for personal scripts; share specific tools by un-ignoring them)
+bin/*
+!bin/devcontainer-exec
