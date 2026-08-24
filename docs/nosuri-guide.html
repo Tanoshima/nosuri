@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nosuri 説明書</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@400;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+:root {
+  --paper:      #F4F5F1;
+  --surface:    #FBFBF8;
+  --surface-2:  #EBEEE7;
+  --ink:        #171C1B;
+  --ink-soft:   #4A554F;
+  --ink-mute:   #77837B;
+  --rule:       #D6DBD2;
+  --moss:       #3F6B52;
+  --moss-soft:  #E3EDE5;
+  --indigo:     #2C4F73;
+  --indigo-soft:#E2E9F1;
+  --ochre:      #8A6A22;
+  --shadow:     0 1px 2px rgba(23,28,27,.05), 0 8px 24px -16px rgba(23,28,27,.35);
+
+  --display: "Zen Old Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --body: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --measure: 68ch;
+  --step--1: clamp(.78rem, .76rem + .1vw, .84rem);
+  --step-0:  clamp(.95rem, .92rem + .15vw, 1.02rem);
+  --step-1:  clamp(1.1rem, 1.05rem + .25vw, 1.25rem);
+  --step-2:  clamp(1.35rem, 1.25rem + .5vw, 1.7rem);
+  --step-3:  clamp(1.7rem, 1.5rem + 1vw, 2.4rem);
+  --step-4:  clamp(2.2rem, 1.8rem + 2.2vw, 3.6rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #101413;
+    --surface:    #171D1B;
+    --surface-2:  #1F2724;
+    --ink:        #E6EAE4;
+    --ink-soft:   #B3BDB5;
+    --ink-mute:   #87948B;
+    --rule:       #2C3733;
+    --moss:       #7FB093;
+    --moss-soft:  #1D2A22;
+    --indigo:     #8FB4D6;
+    --indigo-soft:#182430;
+    --ochre:      #C9A857;
+    --shadow:     0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:      #101413;
+  --surface:    #171D1B;
+  --surface-2:  #1F2724;
+  --ink:        #E6EAE4;
+  --ink-soft:   #B3BDB5;
+  --ink-mute:   #87948B;
+  --rule:       #2C3733;
+  --moss:       #7FB093;
+  --moss-soft:  #1D2A22;
+  --indigo:     #8FB4D6;
+  --indigo-soft:#182430;
+  --ochre:      #C9A857;
+  --shadow:     0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.9);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--step-0);
+  line-height: 1.85;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--moss); text-underline-offset: .2em; text-decoration-thickness: 1px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--moss); outline-offset: 3px; border-radius: 2px; }
+code, kbd { font-family: var(--mono); font-size: .88em; }
+
+/* ---------- masthead ---------- */
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 26px, color-mix(in srgb, var(--moss) 9%, transparent) 26px 27px),
+    repeating-linear-gradient(90deg, transparent 0 26px, color-mix(in srgb, var(--moss) 9%, transparent) 26px 27px),
+    var(--surface);
+}
+.masthead-inner {
+  max-width: 1180px; margin: 0 auto; padding: clamp(3rem, 8vw, 6rem) clamp(1.25rem, 4vw, 3rem) clamp(2.5rem, 5vw, 4rem);
+  display: flex; flex-direction: column; gap: 1.5rem;
+}
+.eyebrow {
+  font-family: var(--mono); font-size: var(--step--1); letter-spacing: .18em;
+  text-transform: uppercase; color: var(--ink-mute); margin: 0;
+}
+.wordmark {
+  font-family: var(--display); font-weight: 700; font-size: var(--step-4);
+  letter-spacing: .02em; line-height: 1.05; margin: 0; text-wrap: balance;
+}
+.wordmark span { color: var(--moss); }
+.lede { max-width: 46ch; font-size: var(--step-1); color: var(--ink-soft); margin: 0; text-wrap: pretty; }
+.badges { display: flex; flex-wrap: wrap; gap: .5rem; }
+.badge {
+  font-family: var(--mono); font-size: var(--step--1); padding: .3rem .7rem;
+  border: 1px solid var(--rule); border-radius: 999px; color: var(--ink-soft); background: var(--paper);
+}
+.badge.is-live { border-color: var(--moss); color: var(--moss); background: var(--moss-soft); }
+
+/* ---------- shell ---------- */
+.shell {
+  max-width: 1180px; margin: 0 auto;
+  padding: clamp(2rem, 5vw, 4rem) clamp(1.25rem, 4vw, 3rem) 6rem;
+  display: grid; gap: clamp(2rem, 5vw, 4rem);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 940px) {
+  .shell { grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
+  .toc { position: sticky; top: 2rem; }
+}
+.toc { font-size: var(--step--1); border-left: 2px solid var(--rule); padding-left: 1rem; }
+.toc h2 {
+  font-family: var(--mono); font-size: var(--step--1); letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ink-mute); font-weight: 500; margin: 0 0 .9rem;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; counter-reset: toc; }
+.toc a { display: block; color: var(--ink-soft); text-decoration: none; line-height: 1.5; }
+.toc a::before {
+  counter-increment: toc; content: counter(toc, decimal-leading-zero);
+  font-family: var(--mono); color: var(--ink-mute); margin-right: .6rem; font-size: .9em;
+}
+.toc a:hover { color: var(--moss); }
+
+main { display: flex; flex-direction: column; gap: clamp(3rem, 6vw, 5rem); min-width: 0; }
+section { display: flex; flex-direction: column; gap: 1.1rem; scroll-margin-top: 2rem; }
+section > p, section > ul, section > ol { max-width: var(--measure); margin: 0; }
+section > ul, section > ol { padding-left: 1.3em; display: flex; flex-direction: column; gap: .4rem; }
+li::marker { color: var(--moss); }
+
+h2 {
+  font-family: var(--display); font-weight: 700; font-size: var(--step-3);
+  margin: 0; line-height: 1.3; text-wrap: balance;
+  display: flex; align-items: baseline; gap: .8rem;
+}
+h2 .num {
+  font-family: var(--mono); font-size: var(--step--1); font-weight: 500; color: var(--moss);
+  letter-spacing: .1em; padding-top: .2em;
+}
+h3 {
+  font-family: var(--body); font-weight: 700; font-size: var(--step-1);
+  margin: 1rem 0 0; line-height: 1.5;
+}
+h4 { font-family: var(--mono); font-size: var(--step--1); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-mute); font-weight: 500; margin: .5rem 0 0; }
+.section-rule { height: 1px; background: var(--rule); border: 0; margin: 0; }
+
+/* ---------- cards & callouts ---------- */
+.card {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 10px;
+  padding: clamp(1.1rem, 2.5vw, 1.6rem); box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: .7rem;
+}
+.grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.card h3 { margin: 0; font-size: var(--step-0); }
+.card p { margin: 0; color: var(--ink-soft); font-size: var(--step--1); line-height: 1.75; }
+.card .tag {
+  align-self: flex-start; font-family: var(--mono); font-size: .7rem; letter-spacing: .1em;
+  text-transform: uppercase; padding: .15rem .5rem; border-radius: 4px;
+}
+.tag.raw  { background: var(--indigo-soft); color: var(--indigo); }
+.tag.main { background: var(--moss-soft); color: var(--moss); }
+
+.note {
+  border-left: 3px solid var(--ochre); background: color-mix(in srgb, var(--ochre) 8%, transparent);
+  padding: .9rem 1.1rem; border-radius: 0 6px 6px 0; font-size: var(--step--1);
+  color: var(--ink-soft); max-width: var(--measure);
+}
+.note strong { color: var(--ink); }
+
+/* ---------- code ---------- */
+pre {
+  margin: 0; background: var(--surface-2); border: 1px solid var(--rule); border-radius: 8px;
+  padding: 1rem 1.1rem; overflow-x: auto; font-family: var(--mono);
+  font-size: var(--step--1); line-height: 1.75; color: var(--ink);
+}
+pre .c { color: var(--ink-mute); }
+pre .k { color: var(--moss); }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
+th, td { text-align: left; padding: .6rem .9rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th {
+  font-family: var(--mono); font-weight: 500; font-size: .72rem; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-mute); background: var(--surface-2); white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: 0; }
+td code { color: var(--ink); background: var(--surface-2); padding: .1rem .35rem; border-radius: 4px; }
+.col-key { white-space: nowrap; font-family: var(--mono); }
+.num-cell { font-variant-numeric: tabular-nums; }
+
+/* ---------- pipeline diagram ---------- */
+.flow { display: flex; flex-direction: column; gap: .5rem; }
+.flow-row { display: grid; gap: .5rem; grid-template-columns: 1fr; align-items: stretch; }
+@media (min-width: 720px) { .flow-row { grid-template-columns: 1fr 2.2rem 1fr 2.2rem 1fr; } }
+.node {
+  border: 1px solid var(--rule); border-radius: 8px; background: var(--surface);
+  padding: .8rem .9rem; display: flex; flex-direction: column; gap: .25rem; min-width: 0;
+}
+.node .n-kind { font-family: var(--mono); font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-mute); }
+.node .n-name { font-family: var(--mono); font-size: var(--step--1); font-weight: 500; word-break: break-all; }
+.node .n-note { font-size: .78rem; color: var(--ink-soft); line-height: 1.6; }
+.node.src { border-style: dashed; }
+.node.tbl { border-color: color-mix(in srgb, var(--indigo) 45%, var(--rule)); background: var(--indigo-soft); }
+.node.tbl .n-kind { color: var(--indigo); }
+.node.future { border-style: dashed; background: transparent; opacity: .75; }
+.arrow {
+  display: flex; align-items: center; justify-content: center; color: var(--moss);
+  font-family: var(--mono); font-size: 1.1rem;
+}
+.arrow::after { content: "→"; }
+@media (max-width: 719px) { .arrow::after { content: "↓"; } }
+
+/* ---------- misc ---------- */
+.kv { display: grid; gap: .4rem 1.2rem; grid-template-columns: max-content 1fr; font-size: var(--step--1); }
+.kv dt { font-family: var(--mono); color: var(--ink-mute); }
+.kv dd { margin: 0; }
+details { border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); padding: .8rem 1rem; }
+details + details { margin-top: .5rem; }
+summary { cursor: pointer; font-weight: 500; }
+details p, details pre { margin-top: .7rem; }
+footer {
+  border-top: 1px solid var(--rule); background: var(--surface);
+  padding: 2.5rem clamp(1.25rem, 4vw, 3rem);
+}
+.footer-inner {
+  max-width: 1180px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 1rem;
+  justify-content: space-between; align-items: baseline;
+  font-family: var(--mono); font-size: var(--step--1); color: var(--ink-mute);
+}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <p class="eyebrow">Product Handbook / 開発者向け説明書</p>
+    <h1 class="wordmark">nosuri <span>／ 長く在る場所を探す</span></h1>
+    <p class="lede">史跡・ジオサイトなど「長い時間そこに在り続けている場所」を検索し、地図で辿るための個人開発サービス。本書は現時点のシステム構成・データ設計・開発手順をまとめたものです。</p>
+    <div class="badges">
+      <span class="badge is-live">現在 : データ基盤フェーズ</span>
+      <span class="badge">PostgreSQL 16 + PostGIS</span>
+      <span class="badge">Python ingest</span>
+      <span class="badge">Go API（未着手）</span>
+      <span class="badge">React SPA（未着手）</span>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="toc" aria-label="目次">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#about">nosuri とは</a></li>
+      <li><a href="#stack">構成と技術スタック</a></li>
+      <li><a href="#data-model">データ設計の原則</a></li>
+      <li><a href="#pipeline">取り込みパイプライン</a></li>
+      <li><a href="#tables">テーブル定義</a></li>
+      <li><a href="#setup">開発環境の使い方</a></li>
+      <li><a href="#scripts">スクリプトの実行</a></li>
+      <li><a href="#sources">オープンデータ源</a></li>
+      <li><a href="#ops">運用とトラブル対応</a></li>
+      <li><a href="#roadmap">これからの予定</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <!-- 1 -->
+    <section id="about">
+      <h2><span class="num">01</span>nosuri とは</h2>
+      <p>城跡、古墳、旧街道、地質露頭 — 数百年から数億年のスケールでそこに在り続けている場所を、位置と分類の両方から探せるようにするサービスです。まずは自分用として作り、いずれ一般公開することを想定しています。</p>
+      <div class="grid">
+        <div class="card">
+          <h3>誰のためのものか</h3>
+          <p>「近くにある史跡を知りたい」「この時代の遺構だけ地図で見たい」という、現地を歩く人。専門家向けの学術データベースではなく、出かける前と歩いている最中に使う道具を目指します。</p>
+        </div>
+        <div class="card">
+          <h3>何ができるようになるか</h3>
+          <p>現在地からの距離、カテゴリ（城跡→山城など）、タグ、時代 — これらを掛け合わせた横断検索と、その結果の地図表示。オープンデータを土台に、手作業の加筆で精度を上げていきます。</p>
+        </div>
+        <div class="card">
+          <h3>いまどの段階か</h3>
+          <p>アプリケーションコードはまだ存在しません。scrap &amp; build 期として、データ基盤（PostGIS）とオープンデータ取り込みスクリプトだけを作っています。抽象化は必要になってから入れる方針です。</p>
+        </div>
+      </div>
+      <div class="note"><strong>設計方針：</strong>早すぎる構造化をしない。Python パッケージも Go モジュールも、それを正当化するだけのコード量が集まってから作ります。</div>
+    </section>
+    <hr class="section-rule">
+
+    <!-- 2 -->
+    <section id="stack">
+      <h2><span class="num">02</span>構成と技術スタック</h2>
+      <p>レイヤごとに担当技術を固定しています。実装済みは DB と取り込みだけで、残りは計画です。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>レイヤ</th><th>技術</th><th>役割</th><th>状態</th></tr></thead>
+          <tbody>
+            <tr><td class="col-key">Database</td><td>PostgreSQL 16 + PostGIS</td><td>正規のデータ保管。距離・範囲検索は SQL 側で解く</td><td>実装済</td></tr>
+            <tr><td class="col-key">Data ingestion</td><td>Python（<code>ingest/</code>）</td><td>オープンデータの取得・整形・raw テーブルへの UPSERT</td><td>実装済</td></tr>
+            <tr><td class="col-key">Backend</td><td>Go</td><td>REST API、画像処理、オープンデータのバッチ実行</td><td>未着手</td></tr>
+            <tr><td class="col-key">Frontend</td><td>React SPA（react-leaflet, PWA）</td><td>地図・検索 UI</td><td>未着手</td></tr>
+            <tr><td class="col-key">Local dev</td><td>Devcontainer + Nix flake（nix-direnv）</td><td>再現可能な開発環境</td><td>実装済</td></tr>
+            <tr><td class="col-key">Production</td><td>AWS — RDS(PostGIS) / ECS・App Runner / S3</td><td>公開時のホスティング</td><td>構想</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>リポジトリの構成</h3>
+      <p>ルートは言語をまたぐ関心事（DB、Nix、ドキュメント）専用です。Python 一式は <code>ingest/</code> の下に閉じており、将来の <code>api/</code>（Go）や <code>web/</code>（React）はその隣に並びます。</p>
+<pre><span class="c"># ルート = 言語横断の関心事</span>
+db/init.sql              <span class="c"># PostGIS 拡張の有効化（DB 新規作成時のみ実行）</span>
+db/raw_jps_shiseki.sql   <span class="c"># raw テーブル DDL（SPARQL 由来）</span>
+db/raw_jps_item_api.sql  <span class="c"># raw テーブル DDL（item API 由来）</span>
+flake.nix                <span class="c"># dev shell の定義 + pg-up / pg-down</span>
+.envrc                   <span class="c"># use flake / PATH_add bin</span>
+bin/devcontainer-exec    <span class="c"># ホストからコンテナに入るヘルパー</span>
+
+<span class="c"># Python は ingest/ に閉じる</span>
+ingest/pyproject.toml    <span class="c"># 依存定義（uv 管理）</span>
+ingest/ingest/db.py      <span class="c"># raw テーブルへの UPSERT</span>
+ingest/ingest/jps.py     <span class="c"># Japan Search SPARQL クライアント</span>
+ingest/ingest/jps_item.py<span class="c"># Japan Search item API クライアント</span>
+ingest/scripts/          <span class="c"># 実行エントリポイント（CLI）</span>
+ingest/tests/            <span class="c"># pytest</span></pre>
+    </section>
+    <hr class="section-rule">
+
+    <!-- 3 -->
+    <section id="data-model">
+      <h2><span class="num">03</span>データ設計の原則</h2>
+      <p>この 3 つが、以降のすべての実装判断の前提になります。</p>
+
+      <h3>raw と main の二層構造</h3>
+      <p>オープンデータは定期的に取り込み直します。そのとき手作業で加筆した内容を上書きしてしまわないよう、テーブルを 2 層に分けています。</p>
+      <div class="grid">
+        <div class="card">
+          <span class="tag raw">Raw layer</span>
+          <h3>raw テーブル</h3>
+          <p>上流オープンデータの 1:1 ミラー。いつでも作り直してよい前提で、元レスポンスを <code>jsonb</code> のまま保持します。取り込みスクリプトが書き込むのはここだけです。</p>
+        </div>
+        <div class="card">
+          <span class="tag main">Main layer</span>
+          <h3>main テーブル</h3>
+          <p>アプリケーションが読む層。手作業の編集、複数ソースのマージ、raw 行への参照を持ちます。<strong>取り込みコードから直接書き込んではいけません。</strong></p>
+        </div>
+      </div>
+      <div class="note">raw → main への昇格は独立した関心事として扱い、<strong>まだ実装していません</strong>。現在存在するのは raw テーブル 2 本だけです。</div>
+
+      <h3>空間データ</h3>
+      <p>緯度経度は PostGIS の <code>geometry(Point, 4326)</code> として保存します。距離・範囲の判定はアプリ側で計算せず、<code>ST_DWithin</code> / <code>ST_Distance</code> など SQL の空間関数で表現してください。座標が取れなかった行は <code>geom</code> が <code>NULL</code> になります。</p>
+<pre><span class="c">-- 例：ある地点から 5km 以内の史跡を近い順に</span>
+<span class="k">SELECT</span> s.name, ST_Distance(a.geom::geography, p.geom::geography) <span class="k">AS</span> m
+<span class="k">FROM</span> raw_jps_item_api a
+<span class="k">JOIN</span> raw_jps_shiseki s <span class="k">USING</span> (subject_uri),
+     (<span class="k">SELECT</span> ST_SetSRID(ST_MakePoint(139.7671, 35.6812), 4326) <span class="k">AS</span> geom) p
+<span class="k">WHERE</span> ST_DWithin(a.geom::geography, p.geom::geography, 5000)
+<span class="k">ORDER BY</span> m;</pre>
+
+      <h3>分類は 3 軸で直交させる</h3>
+      <p>横断検索を成立させるため、分類軸は次の 3 つに固定します。新しい種類のデータを足すときも、4 つ目の軸を作らず既存の 3 軸に収めます。</p>
+      <div class="grid">
+        <div class="card"><h3>カテゴリ（階層）</h3><p>城跡 → 山城 のように親子関係を持つ分類。ものの種類を表します。</p></div>
+        <div class="card"><h3>タグ（フラット）</h3><p>階層に馴染まない特徴づけ。横断的な絞り込みに使います。</p></div>
+        <div class="card"><h3>時代 / 年代</h3><p>いつの遺構か。地質サイトでは地質年代が入ります。</p></div>
+      </div>
+    </section>
+    <hr class="section-rule">
+
+    <!-- 4 -->
+    <section id="pipeline">
+      <h2><span class="num">04</span>取り込みパイプライン</h2>
+      <p>現在動いているのは Japan Search（JPS）からの取り込み 1 系統です。SPARQL で対象の一覧を取り、続いて item API を 1 件ずつ叩いて正確な座標や説明文を足す、2 段構えになっています。</p>
+
+      <div class="flow" role="img" aria-label="Japan Search SPARQL から raw_jps_shiseki へ、続いて item API から raw_jps_item_api へ流れる取り込みパイプライン図">
+        <div class="flow-row">
+          <div class="node src">
+            <span class="n-kind">Upstream</span>
+            <span class="n-name">jpsearch.go.jp/rdf/sparql</span>
+            <span class="n-note">type:史跡 などを 500 件ずつページング取得</span>
+          </div>
+          <div class="arrow" aria-hidden="true"></div>
+          <div class="node">
+            <span class="n-kind">Script</span>
+            <span class="n-name">ingest_jps_shiseki.py</span>
+            <span class="n-note">パース・subject 重複排除・500 件ごとに commit</span>
+          </div>
+          <div class="arrow" aria-hidden="true"></div>
+          <div class="node tbl">
+            <span class="n-kind">Raw table</span>
+            <span class="n-name">raw_jps_shiseki</span>
+            <span class="n-note">名称・時代・画像・出典。subject_uri で UPSERT</span>
+          </div>
+        </div>
+        <div class="flow-row">
+          <div class="node src">
+            <span class="n-kind">Upstream</span>
+            <span class="n-name">jpsearch.go.jp/api/item/{id}</span>
+            <span class="n-note">1 件ずつ。既定 0.3 秒の間隔を空ける</span>
+          </div>
+          <div class="arrow" aria-hidden="true"></div>
+          <div class="node">
+            <span class="n-kind">Script</span>
+            <span class="n-name">ingest_jps_items.py</span>
+            <span class="n-note">未取得の subject_uri を洗い出して補完</span>
+          </div>
+          <div class="arrow" aria-hidden="true"></div>
+          <div class="node tbl">
+            <span class="n-kind">Raw table</span>
+            <span class="n-name">raw_jps_item_api</span>
+            <span class="n-note">緯度経度（geometry）・説明・権利区分</span>
+          </div>
+        </div>
+        <div class="flow-row">
+          <div class="node future">
+            <span class="n-kind">Not built yet</span>
+            <span class="n-name">promotion job</span>
+            <span class="n-note">raw を突き合わせて main へ昇格させる処理</span>
+          </div>
+          <div class="arrow" aria-hidden="true"></div>
+          <div class="node future">
+            <span class="n-kind">Not built yet</span>
+            <span class="n-name">main tables</span>
+            <span class="n-note">手編集・カテゴリ・タグ・時代を持つ層</span>
+          </div>
+          <div class="arrow" aria-hidden="true"></div>
+          <div class="node future">
+            <span class="n-kind">Not built yet</span>
+            <span class="n-name">Go API → React SPA</span>
+            <span class="n-note">検索 API と地図 UI</span>
+          </div>
+        </div>
+      </div>
+
+      <h3>再実行したときの振る舞い</h3>
+      <ul>
+        <li>どちらのスクリプトも <code>subject_uri</code> を主キーとした UPSERT なので、<strong>何度流しても行は増えません</strong>。上流で内容が変わっていれば上書きされ、<code>fetched_at</code> が更新されます。</li>
+        <li>SPARQL の OPTIONAL は同じ <code>?s</code> を複数行返すことがあるため、ページ内とラン全体の両方で重複排除しています。</li>
+        <li><code>ingest_jps_items.py</code> は既定で <code>raw_jps_item_api</code> に未登録の subject だけを対象にします。全件取り直すときは <code>--refresh</code> を付けます。</li>
+        <li><code>raw_jps_item_api.subject_uri</code> は <code>raw_jps_shiseki</code> への外部キー（<code>ON DELETE CASCADE</code>）です。親を消せば子も消えます。</li>
+      </ul>
+    </section>
+    <hr class="section-rule">
+
+    <!-- 5 -->
+    <section id="tables">
+      <h2><span class="num">05</span>テーブル定義</h2>
+      <p>DDL は <code>db/</code> 配下にあります。<code>db/init.sql</code> は拡張の有効化だけで、テーブルの作成は個別の SQL ファイルを <code>psql $DATABASE_URL -f db/&lt;file&gt;.sql</code> で適用します。</p>
+
+      <h4>raw_jps_shiseki — SPARQL 由来の基本情報</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>カラム</th><th>型</th><th>内容</th></tr></thead>
+          <tbody>
+            <tr><td class="col-key">subject_uri</td><td>text PK</td><td>JPS のリソース URI。全パイプラインの結合キー</td></tr>
+            <tr><td class="col-key">jps_type</td><td>text NOT NULL</td><td>取得時の type（史跡 / 名勝 / 天然記念物 など）</td></tr>
+            <tr><td class="col-key">name</td><td>text NOT NULL</td><td>名称（schema:name）</td></tr>
+            <tr><td class="col-key">spatial_uri</td><td>text</td><td>所在地を指す URI</td></tr>
+            <tr><td class="col-key">geohash_uri</td><td>text</td><td>spatial に紐づく geo 値。粗い位置の手がかり</td></tr>
+            <tr><td class="col-key">temporal</td><td>text</td><td>時代・年代の記述</td></tr>
+            <tr><td class="col-key">image_url</td><td>text</td><td>代表画像</td></tr>
+            <tr><td class="col-key">link_url</td><td>text</td><td>詳細ページ</td></tr>
+            <tr><td class="col-key">source_info</td><td>jsonb</td><td>出典情報</td></tr>
+            <tr><td class="col-key">raw</td><td>jsonb NOT NULL</td><td>SPARQL binding をそのまま保持</td></tr>
+            <tr><td class="col-key">fetched_at</td><td>timestamptz</td><td>取得時刻（UPSERT ごとに更新）</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>索引：<code>jps_type</code>、<code>spatial_uri</code>。</p>
+
+      <h4>raw_jps_item_api — item API 由来の位置と本文</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>カラム</th><th>型</th><th>内容</th></tr></thead>
+          <tbody>
+            <tr><td class="col-key">subject_uri</td><td>text PK / FK</td><td><code>raw_jps_shiseki</code> を参照（ON DELETE CASCADE）</td></tr>
+            <tr><td class="col-key">geom</td><td>geometry(Point, 4326)</td><td>正確な緯度経度。取得できなければ NULL</td></tr>
+            <tr><td class="col-key">link_url</td><td>text</td><td>提供元のリンク</td></tr>
+            <tr><td class="col-key">description</td><td>text</td><td>説明文</td></tr>
+            <tr><td class="col-key">contents_rights_type</td><td>text</td><td>権利区分。公開時の表示可否判断に使う</td></tr>
+            <tr><td class="col-key">raw</td><td>jsonb NOT NULL</td><td>API レスポンス全体</td></tr>
+            <tr><td class="col-key">fetched_at</td><td>timestamptz</td><td>取得時刻</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>索引：<code>geom</code>（GiST）、<code>contents_rights_type</code>。</p>
+    </section>
+    <hr class="section-rule">
+
+    <!-- 6 -->
+    <section id="setup">
+      <h2><span class="num">06</span>開発環境の使い方</h2>
+      <p>環境は devcontainer + Nix flake で完全に再現できます。VS Code で開いて <strong>Reopen in Container</strong> を選ぶだけです（CLI 派は <code>devcontainer up --workspace-folder .</code>）。初回はイメージ取得と Nix のビルドで 10〜20 分かかります。</p>
+      <ul>
+        <li>direnv（nix-direnv）がプロジェクトルートへの <code>cd</code> で dev shell を自動有効化します。<code>.envrc is blocked</code> と言われたら <code>direnv allow</code>。</li>
+        <li>PostgreSQL は自動起動<strong>しません</strong>が、コンテナ起動時に <code>pg-up</code> がバックグラウンドで走ります（ログは <code>/tmp/pg.log</code>）。</li>
+        <li>Python の venv（<code>ingest/.venv/</code>）は shell 入室時の <code>uv sync</code> で同期済みです。</li>
+      </ul>
+
+      <h3>接続情報</h3>
+      <p><code>DATABASE_URL</code> と <code>PG*</code> は flake の shellHook が自動で export します。<code>.env</code> ファイルは不要です。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>変数</th><th>値</th></tr></thead>
+          <tbody>
+            <tr><td class="col-key">DATABASE_URL</td><td><code>postgresql://127.0.0.1:5432/nosuri</code></td></tr>
+            <tr><td class="col-key">PGHOST / PGPORT</td><td class="num-cell"><code>127.0.0.1</code> / <code>5432</code></td></tr>
+            <tr><td class="col-key">PGDATABASE / PGUSER</td><td><code>nosuri</code> / <code>postgres</code>（パスワードなし・trust 認証）</td></tr>
+            <tr><td class="col-key">PGDATA</td><td><code>$PWD/.local/state/postgres</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>ホスト側の GUI クライアント（DBeaver / TablePlus など）からは、ポート転送済みの <code>localhost:5432</code> に同じ情報で接続できます。コンテナ内なら VS Code の SQLTools が同梱済みです。</p>
+
+      <h3>よく使うコマンド</h3>
+<pre>pg-up                              <span class="c"># PostgreSQL 起動（初回は initdb + DB 作成 + init.sql）</span>
+pg-down                            <span class="c"># 停止</span>
+psql $DATABASE_URL                 <span class="c"># 接続</span>
+devcontainer-exec                  <span class="c"># ホストからコンテナの zsh に入る</span>
+
+cd ingest
+uv add &lt;package&gt;                   <span class="c"># 依存追加（pyproject.toml と uv.lock を更新）</span>
+uv run pytest                      <span class="c"># テスト実行</span>
+uv run python scripts/&lt;file&gt;.py    <span class="c"># スクリプト実行</span></pre>
+      <div class="note"><strong>venv を直接 pip で触らないこと。</strong>依存は必ず <code>ingest/</code> で <code>uv</code> 経由。CLI ツールや PostgreSQL 拡張を増やすときは <code>flake.nix</code> を編集します。</div>
+    </section>
+    <hr class="section-rule">
+
+    <!-- 7 -->
+    <section id="scripts">
+      <h2><span class="num">07</span>スクリプトの実行</h2>
+      <p>どちらも <code>ingest/</code> 配下で <code>uv run python scripts/…</code> として起動します。<code>DATABASE_URL</code> が未設定だと（dry-run を除き）終了コード 2 で止まります。</p>
+
+      <h4>ingest_jps_shiseki.py — 一覧の取り込み</h4>
+<pre>uv run python scripts/ingest_jps_shiseki.py              <span class="c"># 既定の 4 type を全件</span>
+uv run python scripts/ingest_jps_shiseki.py --limit 20    <span class="c"># 動作確認</span>
+uv run python scripts/ingest_jps_shiseki.py --types 史跡 名勝
+uv run python scripts/ingest_jps_shiseki.py --dry-run     <span class="c"># DB に書かない</span></pre>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>オプション</th><th>既定値</th><th>意味</th></tr></thead>
+          <tbody>
+            <tr><td class="col-key">--types</td><td>史跡 / 史跡名勝天然記念物等 / 名勝 / 天然記念物</td><td>取り込む JPS type</td></tr>
+            <tr><td class="col-key">--limit</td><td class="num-cell">なし</td><td>type ごとの取得上限（スモークテスト用）</td></tr>
+            <tr><td class="col-key">--page-size</td><td class="num-cell">500</td><td>SPARQL の LIMIT</td></tr>
+            <tr><td class="col-key">--sleep</td><td class="num-cell">1.0</td><td>ページ取得間の待機秒数</td></tr>
+            <tr><td class="col-key">--dry-run</td><td class="num-cell">off</td><td>取得とパースのみ。DB 接続もしない</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>ingest_jps_items.py — 座標と本文の補完</h4>
+<pre>uv run python scripts/ingest_jps_items.py                 <span class="c"># 未取得ぶんすべて</span>
+uv run python scripts/ingest_jps_items.py --limit 10      <span class="c"># 動作確認</span>
+uv run python scripts/ingest_jps_items.py --refresh       <span class="c"># 取得済みも取り直す</span>
+uv run python scripts/ingest_jps_items.py --sleep 0.2</pre>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>オプション</th><th>既定値</th><th>意味</th></tr></thead>
+          <tbody>
+            <tr><td class="col-key">--limit</td><td class="num-cell">なし</td><td>処理する subject 数の上限</td></tr>
+            <tr><td class="col-key">--sleep</td><td class="num-cell">0.3</td><td>API 呼び出し間隔。上流に負荷をかけない</td></tr>
+            <tr><td class="col-key">--refresh</td><td class="num-cell">off</td><td>取得済みの subject も対象にする</td></tr>
+            <tr><td class="col-key">--commit-every</td><td class="num-cell">200</td><td>この件数ごとに commit</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>1 件ずつ HTTP を叩くうえ既定で 0.3 秒待つため、全件補完は数時間規模になります。進捗は 200 件ごとに <code>fetched / with_coords / errors</code> がログに出ます。404 と通信失敗はスキップして続行し、件数だけ数えます。</p>
+    </section>
+    <hr class="section-rule">
+
+    <!-- 8 -->
+    <section id="sources">
+      <h2><span class="num">08</span>オープンデータ源</h2>
+      <p>構造が整っている史跡データから着手し、ジオサイトへ広げていきます。</p>
+      <div class="grid">
+        <div class="card"><span class="tag main">取り込み済</span><h3>Japan Search（JPS）</h3><p>国立国会図書館の分野横断統合ポータル。SPARQL エンドポイントと item API の両方を利用中。</p></div>
+        <div class="card"><h3>国土数値情報（国交省）</h3><p>GeoJSON の一括ダウンロード。初期データの種まきに向く。</p></div>
+        <div class="card"><h3>G空間情報センター</h3><p>自治体・ジオパークのデータセット。</p></div>
+        <div class="card"><h3>産総研 シームレス地質図 API</h3><p>ジオサイト表示のベースレイヤ。</p></div>
+        <div class="card"><h3>OpenStreetMap / Wikidata</h3><p>Overpass API 経由。公式データが薄い領域の広域フォールバック。</p></div>
+      </div>
+      <div class="note"><code>contents_rights_type</code> を raw に保持しているのは、公開時に表示してよいデータかを後から判断できるようにするためです。</div>
+    </section>
+    <hr class="section-rule">
+
+    <!-- 9 -->
+    <section id="ops">
+      <h2><span class="num">09</span>運用とトラブル対応</h2>
+
+      <h3>データはどこにあり、いつ消えるか</h3>
+      <p>実体は <code>$PWD/.local/state/postgres</code>（ワークスペースのバインドマウント上）です。<code>pg-down</code>／コンテナ再起動／Rebuild Container では消えません。消えるのは <code>rm -rf .local/state/postgres</code>、プロジェクトごと削除、別マシンへの移動です。<code>.local/</code> は gitignore 済みなので、残したいなら明示的にダンプを取ります。</p>
+      <ul>
+        <li><strong>raw テーブル</strong> — バックアップ不要。取り込みが冪等なので、失ったら取り直す。</li>
+        <li><strong>main テーブル</strong> — 手編集を含むので <code>pg_dump</code> で保存する。</li>
+      </ul>
+<pre>mkdir -p backups
+pg_dump -Fc $DATABASE_URL -f backups/nosuri_$(date +%Y%m%d_%H%M%S).dump
+pg_restore -d $DATABASE_URL --clean --if-exists backups/nosuri_xxx.dump</pre>
+      <p><code>backups/</code> を作ったら <code>.gitignore</code> に追加してください。</p>
+
+      <h3>スキーマを変えたとき</h3>
+      <p><code>db/init.sql</code> は <strong>DB 新規作成時に一度しか走りません</strong>。既存 DB に反映するには次のどちらかを取ります。</p>
+<pre><span class="c"># A. 手で当てる（データを残す）</span>
+psql $DATABASE_URL -f db/init.sql
+
+<span class="c"># B. cluster ごと作り直す（データは破棄）</span>
+pg-down &amp;&amp; rm -rf .local/state/postgres &amp;&amp; pg-up</pre>
+      <p>SQL ファイルが増えてきたら <code>db/migrations/</code> 構成への移行を検討します。</p>
+
+      <h3>詰まったとき</h3>
+      <details><summary>PostgreSQL に接続できない</summary><pre>tail -50 /tmp/pg.log</pre><p>ポート競合かデータ破損が主因。復旧しなければ cluster をリセットします。</p></details>
+      <details><summary>direnv: error .envrc is blocked</summary><pre>direnv allow</pre><p><code>flake.nix</code> を編集すると再許可が必要になることがあります。</p></details>
+      <details><summary>flake が "not tracked by Git" と言う</summary><p>新規ファイルが未 stage のときに出ます。<code>git add flake.nix</code> で解決（commit は不要）。</p></details>
+      <details><summary>コンテナを作り直したい</summary><p>VS Code: コマンドパレット → <strong>Dev Containers: Rebuild Container Without Cache</strong>／CLI: <code>devcontainer up --workspace-folder . --remove-existing-container</code></p></details>
+
+      <div class="note"><strong>セキュリティ：</strong>ローカルの cluster は <code>listen_addresses = '127.0.0.1'</code> かつ trust 認証です。この設定を本番や共有環境に持ち込まないこと。</div>
+    </section>
+    <hr class="section-rule">
+
+    <!-- 10 -->
+    <section id="roadmap">
+      <h2><span class="num">10</span>これからの予定</h2>
+      <p>順番は前のものが片付いてから次へ。各段階で必要になるまで構造は足しません。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>次にやること</th><th>内容</th></tr></thead>
+          <tbody>
+            <tr><td class="col-key">分類スキーマ</td><td>カテゴリ・タグ・時代の 3 軸をテーブルとして定義する</td></tr>
+            <tr><td class="col-key">main テーブル</td><td>アプリが読む層と、raw 行への参照を設計する</td></tr>
+            <tr><td class="col-key">昇格処理</td><td>raw を突き合わせて main を組み立てる。手編集を壊さないマージ規則</td></tr>
+            <tr><td class="col-key">データソース追加</td><td>国土数値情報の GeoJSON 取り込みで面的なカバレッジを確保</td></tr>
+            <tr><td class="col-key">検索 API</td><td>Go で <code>api/</code>。空間 + 3 軸の複合クエリ</td></tr>
+            <tr><td class="col-key">地図 UI</td><td>React + react-leaflet で <code>web/</code>。PWA として現地で使える形に</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <span>nosuri — 個人開発 / データ基盤フェーズ</span>
+    <span>コードとコメントは英語、ドキュメントと会話は日本語</span>
+  </div>
+</footer>
+</body>
+</html>
