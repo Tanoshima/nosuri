@@ -8,19 +8,14 @@ from ingest import db
 
 @pytest.fixture
 def seeded(pg_conn):
-    """Seed a parent row in raw_jps_shiseki so the FK is satisfied."""
+    """Start from an empty slice of both raw tables (rolled back by pg_conn)."""
     with pg_conn.cursor() as cur:
         cur.execute("DELETE FROM raw_jps_item_api WHERE subject_uri LIKE 'test:%'")
         cur.execute("DELETE FROM raw_jps_shiseki WHERE subject_uri LIKE 'test:%'")
         cur.execute(
             "INSERT INTO raw_jps_shiseki (subject_uri, jps_type, name, raw) "
-            "VALUES (%s, '史跡', 'parent', '{}'::jsonb)",
+            "VALUES (%s, '史跡', 'sibling', '[]'::jsonb)",
             ("test:s1",),
-        )
-        cur.execute(
-            "INSERT INTO raw_jps_shiseki (subject_uri, jps_type, name, raw) "
-            "VALUES (%s, '史跡', 'parent2', '{}'::jsonb)",
-            ("test:s2",),
         )
     yield pg_conn
 
@@ -93,10 +88,22 @@ def test_upsert_item_batches_multiple(seeded):
     assert n == 2
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT count(*) FROM raw_jps_item_api WHERE subject_uri LIKE 'test:%'"
+            "SELECT count(*) FROM raw_jps_item_api WHERE subject_uri = 'test:orphan'"
         )
-        assert cur.fetchone()[0] == 2
+        assert cur.fetchone()[0] == 1
 
 
 def test_upsert_item_empty_noop(seeded):
     assert db.upsert_item_rows(seeded, []) == 0
+
+
+def test_upsert_item_does_not_require_a_raw_jps_shiseki_row(seeded):
+    """No FK: the expensive item table survives a rebuild of raw_jps_shiseki."""
+    conn = seeded
+    db.upsert_item_rows(conn, [_row(subject="test:orphan")])
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM raw_jps_shiseki WHERE subject_uri LIKE 'test:%'")
+        cur.execute(
+            "SELECT count(*) FROM raw_jps_item_api WHERE subject_uri = 'test:orphan'"
+        )
+        assert cur.fetchone()[0] == 1

@@ -17,7 +17,7 @@ The devcontainer provides a Nix flake-based dev shell, auto-activated by direnv 
 `DATABASE_URL` and `PG{HOST,PORT,DATABASE,USER}` are exported by the flake's `shellHook` automatically — no `.env` file is needed for local DB access. `PGDATA` points to `.local/state/postgres` inside the project.
 
 Common commands (inside the dev shell):
-- `pg-up` — initialize (first time) and start PostgreSQL, create the `nosuri` DB and apply `db/init.sql`
+- `pg-up` — initialize (first time) and start PostgreSQL, create the `nosuri` DB and apply `db/init.sql` (applied on every start)
 - `pg-down` — stop PostgreSQL
 - `psql $DATABASE_URL` — connect to the database
 - `cd ingest && uv run python scripts/<file>.py` — run an ingestion script in the project venv
@@ -28,7 +28,9 @@ Python dependencies are managed by [uv](https://docs.astral.sh/uv/). `uv sync` r
 
 To change the dev shell (packages, env vars, postgres extensions): edit `flake.nix`. PostgreSQL extensions are configured via `pkgs.postgresql_16.withPackages`.
 
-SQL run by `pg-up` on first DB creation lives in `db/init.sql` (currently enables `postgis` and `postgis_topology`). It does **not** re-run if the DB already exists — to apply changes, either run the SQL manually (`psql $DATABASE_URL -f db/init.sql`) or reset the cluster (`pg-down && rm -rf .local/state/postgres && pg-up`).
+`db/init.sql` is the authoritative schema entry point: it enables the PostGIS extensions and `\ir`-includes the per-table DDL files (`db/raw_jps_shiseki.sql`, `db/raw_jps_item_api.sql`). Every statement is `CREATE ... IF NOT EXISTS`, so it is idempotent and `pg-up` applies it on **every** start; it can also be run by hand (`psql $DATABASE_URL -f db/init.sql`).
+
+Because of `IF NOT EXISTS`, editing a table file does **not** change a table that already exists. Reshaping one (column type, primary key, index) needs a numbered file in `db/migrations/`, applied manually (`psql $DATABASE_URL -f db/migrations/000N_*.sql`); alternatively reset the cluster (`pg-down && rm -rf .local/state/postgres && pg-up`).
 
 ## Architecture notes
 

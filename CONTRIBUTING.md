@@ -214,25 +214,29 @@ psql $DATABASE_URL -f backups/nosuri_xxx.sql
 
 `backups/` を作る場合は `.gitignore` に追加すること（ダンプは大きくなりがち、かつ機密が混じる可能性がある）。
 
-### スキーマ変更（`db/init.sql` 編集後）
+### スキーマ変更
 
-`db/init.sql` は `pg-up` の **初回 DB 作成時の一度しか実行されない**。既存 DB への適用方法は2つ：
+`db/init.sql` が唯一のエントリポイントで、拡張の有効化と各テーブルの DDL (`db/raw_jps_shiseki.sql`, `db/raw_jps_item_api.sql`) の `\ir` 取り込みを行う。全文が `CREATE ... IF NOT EXISTS` なので冪等で、`pg-up` は **毎回** これを適用する。手動適用も同じ：
 
-**A. 手動で実行（既存データを残す）**
 ```bash
 psql $DATABASE_URL -f db/init.sql
 ```
 
-**B. DB を完全リセット（既存データを破棄）**
+**テーブルを新規追加するとき**：`db/` に DDL ファイルを追加し、`db/init.sql` に `\ir` の行を足す。それだけで `pg-up` に乗る。
+
+**既存テーブルの形を変えるとき**（カラム型・主キー・索引）：`IF NOT EXISTS` は既存テーブルを変更しないので、DDL ファイルを直すだけでは反映されない。`db/migrations/000N_<説明>.sql` を追加し、手で当てる：
+
+```bash
+psql $DATABASE_URL -f db/migrations/0001_reshape_raw_jps.sql
+```
+
+DDL ファイル（新規 DB 用の正解）とマイグレーション（既存 DB を追いつかせる差分）の両方を必ず更新すること。既存データを捨ててよいなら DB リセットでも良い：
+
 ```bash
 pg-down
 rm -rf .local/state/postgres
 pg-up
 ```
-
-### 開発中の任意 SQL ファイル管理
-
-スキーマ変更が増えてきたら `db/migrations/` のような構成への移行を検討（今は単一の `init.sql` のみ）。
 
 ---
 

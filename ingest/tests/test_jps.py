@@ -44,24 +44,24 @@ def test_parse_bindings_extracts_all_fields():
     assert a["subject_uri"] == "https://jpsearch.go.jp/entity/x1"
     assert a["jps_type"] == "史跡"
     assert a["name"] == "小田城跡"
-    assert a["spatial_uri"] == "https://jpsearch.go.jp/entity/place/茨城県.つくば市"
-    assert a["geohash_uri"] == "http://geohash.org/xnd28"
-    assert a["temporal"] == "鎌倉時代"
-    assert a["image_url"] == "https://example.com/i.jpg"
-    assert a["source_info"] == "https://example.com/src"
-    assert "raw" in a and isinstance(a["raw"], dict)
+    assert a["spatial_uris"] == ["https://jpsearch.go.jp/entity/place/茨城県.つくば市"]
+    assert a["geohash_uris"] == ["http://geohash.org/xnd28"]
+    assert a["temporals"] == ["鎌倉時代"]
+    assert a["image_urls"] == ["https://example.com/i.jpg"]
+    assert a["source_infos"] == ["https://example.com/src"]
+    assert a["raw"] == [SAMPLE_RESPONSE["results"]["bindings"][0]]
 
 
-def test_parse_bindings_missing_optionals_are_none():
+def test_parse_bindings_missing_optionals_are_empty_arrays():
     rows = jps.parse_bindings(SAMPLE_RESPONSE, jps_type="史跡")
     b = rows[1]
     assert b["subject_uri"] == "https://jpsearch.go.jp/entity/x2"
     assert b["name"] == "登呂遺跡"
-    assert b["spatial_uri"] is None
-    assert b["geohash_uri"] is None
-    assert b["temporal"] is None
-    assert b["image_url"] is None
-    assert b["source_info"] is None
+    assert b["spatial_uris"] == []
+    assert b["geohash_uris"] == []
+    assert b["temporals"] == []
+    assert b["image_urls"] == []
+    assert b["source_infos"] == []
 
 
 def test_parse_bindings_empty():
@@ -69,8 +69,8 @@ def test_parse_bindings_empty():
     assert jps.parse_bindings(empty, jps_type="史跡") == []
 
 
-def test_parse_bindings_deduplicates_by_subject_keeping_first():
-    """Multiple bindings for the same subject (e.g. multi-valued spatial) collapse to one row."""
+def test_parse_bindings_keeps_every_value_of_a_multi_valued_predicate():
+    """Multiple bindings for the same subject collapse to one row, keeping all values."""
     data = {
         "head": {"vars": ["s", "name", "spatial"]},
         "results": {
@@ -90,7 +90,33 @@ def test_parse_bindings_deduplicates_by_subject_keeping_first():
     }
     rows = jps.parse_bindings(data, jps_type="史跡")
     assert len(rows) == 1
-    assert rows[0]["spatial_uri"] == "place:1"
+    assert rows[0]["spatial_uris"] == ["place:1", "place:2"]
+    assert len(rows[0]["raw"]) == 2
+
+
+def test_parse_bindings_does_not_repeat_identical_values():
+    data = {
+        "head": {"vars": ["s", "name", "spatial", "image"]},
+        "results": {
+            "bindings": [
+                {
+                    "s": {"type": "uri", "value": "uri:1"},
+                    "name": {"type": "literal", "value": "A"},
+                    "spatial": {"type": "uri", "value": "place:1"},
+                    "image": {"type": "uri", "value": "img:1"},
+                },
+                {
+                    "s": {"type": "uri", "value": "uri:1"},
+                    "name": {"type": "literal", "value": "A"},
+                    "spatial": {"type": "uri", "value": "place:1"},
+                    "image": {"type": "uri", "value": "img:2"},
+                },
+            ]
+        },
+    }
+    rows = jps.parse_bindings(data, jps_type="史跡")
+    assert rows[0]["spatial_uris"] == ["place:1"]
+    assert rows[0]["image_urls"] == ["img:1", "img:2"]
 
 
 def test_build_query_includes_type_limit_offset():
@@ -122,8 +148,8 @@ def test_fetch_page_calls_endpoint_with_query_and_json_accept():
 
 
 @responses.activate
-def test_iter_rows_dedupes_subjects_across_pages():
-    """Multi-valued OPTIONAL bindings can repeat the same ?s across paginated calls."""
+def test_iter_rows_merges_a_subject_that_straddles_a_page_boundary():
+    """A subject's bindings can span two pages — the values must not be lost."""
     page1 = {
         "head": {"vars": ["s", "name"]},
         "results": {
@@ -135,18 +161,20 @@ def test_iter_rows_dedupes_subjects_across_pages():
                 {
                     "s": {"type": "uri", "value": "uri:B"},
                     "name": {"type": "literal", "value": "B"},
+                    "spatial": {"type": "uri", "value": "place:1"},
                 },
             ]
         },
     }
     page2 = {
-        "head": {"vars": ["s", "name"]},
+        "head": {"vars": ["s", "name", "spatial"]},
         "results": {
             "bindings": [
-                # uri:B reappears on page 2 — must be filtered out
+                # uri:B continues on page 2 with its second spatial value
                 {
                     "s": {"type": "uri", "value": "uri:B"},
                     "name": {"type": "literal", "value": "B"},
+                    "spatial": {"type": "uri", "value": "place:2"},
                 },
                 {
                     "s": {"type": "uri", "value": "uri:C"},
@@ -164,6 +192,9 @@ def test_iter_rows_dedupes_subjects_across_pages():
     rows = list(jps.iter_rows(jps_type="史跡", page_size=2))
     subjects = [r["subject_uri"] for r in rows]
     assert subjects == ["uri:A", "uri:B", "uri:C"]
+    merged = next(r for r in rows if r["subject_uri"] == "uri:B")
+    assert merged["spatial_uris"] == ["place:1", "place:2"]
+    assert len(merged["raw"]) == 2
 
 
 @responses.activate

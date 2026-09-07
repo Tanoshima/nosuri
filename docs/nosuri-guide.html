@@ -321,9 +321,10 @@ footer {
       <h3>リポジトリの構成</h3>
       <p>ルートは言語をまたぐ関心事（DB、Nix、ドキュメント）専用です。Python 一式は <code>ingest/</code> の下に閉じており、将来の <code>api/</code>（Go）や <code>web/</code>（React）はその隣に並びます。</p>
 <pre><span class="c"># ルート = 言語横断の関心事</span>
-db/init.sql              <span class="c"># PostGIS 拡張の有効化（DB 新規作成時のみ実行）</span>
+db/init.sql              <span class="c"># スキーマの入口：拡張 + 各 DDL の取り込み（冪等）</span>
 db/raw_jps_shiseki.sql   <span class="c"># raw テーブル DDL（SPARQL 由来）</span>
 db/raw_jps_item_api.sql  <span class="c"># raw テーブル DDL（item API 由来）</span>
+db/migrations/           <span class="c"># 既存テーブルの作り替え（手で当てる）</span>
 flake.nix                <span class="c"># dev shell の定義 + pg-up / pg-down</span>
 .envrc                   <span class="c"># use flake / PATH_add bin</span>
 bin/devcontainer-exec    <span class="c"># ホストからコンテナに入るヘルパー</span>
@@ -362,12 +363,14 @@ ingest/tests/            <span class="c"># pytest</span></pre>
       <h3>空間データ</h3>
       <p>緯度経度は PostGIS の <code>geometry(Point, 4326)</code> として保存します。距離・範囲の判定はアプリ側で計算せず、<code>ST_DWithin</code> / <code>ST_Distance</code> など SQL の空間関数で表現してください。座標が取れなかった行は <code>geom</code> が <code>NULL</code> になります。</p>
 <pre><span class="c">-- 例：ある地点から 5km 以内の史跡を近い順に</span>
-<span class="k">SELECT</span> s.name, ST_Distance(a.geom::geography, p.geom::geography) <span class="k">AS</span> m
+<span class="c">-- raw_jps_shiseki は (subject_uri, jps_type) 単位なので DISTINCT ON で 1 件に畳む</span>
+<span class="k">SELECT DISTINCT ON</span> (a.subject_uri)
+       s.name, ST_Distance(a.geom::geography, p.geom::geography) <span class="k">AS</span> m
 <span class="k">FROM</span> raw_jps_item_api a
 <span class="k">JOIN</span> raw_jps_shiseki s <span class="k">USING</span> (subject_uri),
      (<span class="k">SELECT</span> ST_SetSRID(ST_MakePoint(139.7671, 35.6812), 4326) <span class="k">AS</span> geom) p
 <span class="k">WHERE</span> ST_DWithin(a.geom::geography, p.geom::geography, 5000)
-<span class="k">ORDER BY</span> m;</pre>
+<span class="k">ORDER BY</span> a.subject_uri, m;</pre>
 
       <h3>分類は 3 軸で直交させる</h3>
       <p>横断検索を成立させるため、分類軸は次の 3 つに固定します。新しい種類のデータを足すときも、4 つ目の軸を作らず既存の 3 軸に収めます。</p>
@@ -395,13 +398,13 @@ ingest/tests/            <span class="c"># pytest</span></pre>
           <div class="node">
             <span class="n-kind">Script</span>
             <span class="n-name">ingest_jps_shiseki.py</span>
-            <span class="n-note">パース・subject 重複排除・500 件ごとに commit</span>
+            <span class="n-note">パース・subject 単位に畳む・500 件ごとに commit</span>
           </div>
           <div class="arrow" aria-hidden="true"></div>
           <div class="node tbl">
             <span class="n-kind">Raw table</span>
             <span class="n-name">raw_jps_shiseki</span>
-            <span class="n-note">名称・時代・画像・出典。subject_uri で UPSERT</span>
+            <span class="n-note">名称・時代・画像・出典。(subject_uri, jps_type) で UPSERT</span>
           </div>
         </div>
         <div class="flow-row">
@@ -446,10 +449,11 @@ ingest/tests/            <span class="c"># pytest</span></pre>
 
       <h3>再実行したときの振る舞い</h3>
       <ul>
-        <li>どちらのスクリプトも <code>subject_uri</code> を主キーとした UPSERT なので、<strong>何度流しても行は増えません</strong>。上流で内容が変わっていれば上書きされ、<code>fetched_at</code> が更新されます。</li>
-        <li>SPARQL の OPTIONAL は同じ <code>?s</code> を複数行返すことがあるため、ページ内とラン全体の両方で重複排除しています。</li>
+        <li>どちらのスクリプトも主キー（<code>raw_jps_shiseki</code> は <code>(subject_uri, jps_type)</code>、<code>raw_jps_item_api</code> は <code>subject_uri</code>）での UPSERT なので、<strong>何度流しても行は増えません</strong>。上流で内容が変わっていれば上書きされ、<code>fetched_at</code> が更新されます。</li>
+        <li>SPARQL の OPTIONAL は同じ <code>?s</code> を複数行返すことがあります。これは捨てずに 1 行へ畳み、多値のカラムは配列として全件保持します（ページ境界をまたぐ subject も結合されます）。</li>
+        <li>同じ史跡が複数の type で公開されている場合（史跡かつ名勝など）、type ごとに 1 行ずつ残ります。互いを上書きしません。</li>
         <li><code>ingest_jps_items.py</code> は既定で <code>raw_jps_item_api</code> に未登録の subject だけを対象にします。全件取り直すときは <code>--refresh</code> を付けます。</li>
-        <li><code>raw_jps_item_api.subject_uri</code> は <code>raw_jps_shiseki</code> への外部キー（<code>ON DELETE CASCADE</code>）です。親を消せば子も消えます。</li>
+        <li>2 本の raw テーブルの間に<strong>外部キーはありません</strong>。item API 側は 1 件ずつ HTTP を叩く高コストなテーブルで、数分で作り直せる <code>raw_jps_shiseki</code> の再構築に巻き込まれてはならないためです。上流から消えた subject は JOIN で自然に落ちます。</li>
       </ul>
     </section>
     <hr class="section-rule">
@@ -457,35 +461,34 @@ ingest/tests/            <span class="c"># pytest</span></pre>
     <!-- 5 -->
     <section id="tables">
       <h2><span class="num">05</span>テーブル定義</h2>
-      <p>DDL は <code>db/</code> 配下にあります。<code>db/init.sql</code> は拡張の有効化だけで、テーブルの作成は個別の SQL ファイルを <code>psql $DATABASE_URL -f db/&lt;file&gt;.sql</code> で適用します。</p>
+      <p>DDL は <code>db/</code> 配下にあります。<code>db/init.sql</code> が拡張の有効化と各テーブル DDL の取り込みを行い、<code>pg-up</code> が毎回これを適用します（冪等）。既存テーブルの形を変える場合だけ <code>db/migrations/</code> の SQL を手で当てます。</p>
 
       <h4>raw_jps_shiseki — SPARQL 由来の基本情報</h4>
       <div class="table-wrap">
         <table>
           <thead><tr><th>カラム</th><th>型</th><th>内容</th></tr></thead>
           <tbody>
-            <tr><td class="col-key">subject_uri</td><td>text PK</td><td>JPS のリソース URI。全パイプラインの結合キー</td></tr>
-            <tr><td class="col-key">jps_type</td><td>text NOT NULL</td><td>取得時の type（史跡 / 名勝 / 天然記念物 など）</td></tr>
+            <tr><td class="col-key">subject_uri</td><td>text PK*</td><td>JPS のリソース URI。全パイプラインの結合キー</td></tr>
+            <tr><td class="col-key">jps_type</td><td>text PK*</td><td>取得時の type（史跡 / 名勝 / 天然記念物 など）。主キーは <code>(subject_uri, jps_type)</code> の複合</td></tr>
             <tr><td class="col-key">name</td><td>text NOT NULL</td><td>名称（schema:name）</td></tr>
-            <tr><td class="col-key">spatial_uri</td><td>text</td><td>所在地を指す URI</td></tr>
-            <tr><td class="col-key">geohash_uri</td><td>text</td><td>spatial に紐づく geo 値。粗い位置の手がかり</td></tr>
-            <tr><td class="col-key">temporal</td><td>text</td><td>時代・年代の記述</td></tr>
-            <tr><td class="col-key">image_url</td><td>text</td><td>代表画像</td></tr>
-            <tr><td class="col-key">link_url</td><td>text</td><td>詳細ページ</td></tr>
-            <tr><td class="col-key">source_info</td><td>jsonb</td><td>出典情報</td></tr>
-            <tr><td class="col-key">raw</td><td>jsonb NOT NULL</td><td>SPARQL binding をそのまま保持</td></tr>
+            <tr><td class="col-key">spatial_uris</td><td>text[] NOT NULL</td><td>所在地を指す URI（多値）</td></tr>
+            <tr><td class="col-key">geohash_uris</td><td>text[] NOT NULL</td><td>spatial に紐づく geo 値。粗い位置の手がかり</td></tr>
+            <tr><td class="col-key">temporals</td><td>text[] NOT NULL</td><td>時代・年代の記述（多値）</td></tr>
+            <tr><td class="col-key">image_urls</td><td>text[] NOT NULL</td><td>画像（多値）</td></tr>
+            <tr><td class="col-key">source_infos</td><td>text[] NOT NULL</td><td>出典情報（多値）</td></tr>
+            <tr><td class="col-key">raw</td><td>jsonb NOT NULL</td><td>この行を作った SPARQL binding の<strong>配列</strong>。後から列を増やすときの原本</td></tr>
             <tr><td class="col-key">fetched_at</td><td>timestamptz</td><td>取得時刻（UPSERT ごとに更新）</td></tr>
           </tbody>
         </table>
       </div>
-      <p>索引：<code>jps_type</code>、<code>spatial_uri</code>。</p>
+      <p>索引：<code>jps_type</code>、<code>spatial_uris</code>（GIN）。値が無い多値カラムは NULL ではなく空配列 <code>{}</code> になります。</p>
 
       <h4>raw_jps_item_api — item API 由来の位置と本文</h4>
       <div class="table-wrap">
         <table>
           <thead><tr><th>カラム</th><th>型</th><th>内容</th></tr></thead>
           <tbody>
-            <tr><td class="col-key">subject_uri</td><td>text PK / FK</td><td><code>raw_jps_shiseki</code> を参照（ON DELETE CASCADE）</td></tr>
+            <tr><td class="col-key">subject_uri</td><td>text PK</td><td>JPS のリソース URI。<code>raw_jps_shiseki</code> への外部キーは<strong>張らない</strong>（上記「再実行したときの振る舞い」参照）</td></tr>
             <tr><td class="col-key">geom</td><td>geometry(Point, 4326)</td><td>正確な緯度経度。取得できなければ NULL</td></tr>
             <tr><td class="col-key">link_url</td><td>text</td><td>提供元のリンク</td></tr>
             <tr><td class="col-key">description</td><td>text</td><td>説明文</td></tr>
@@ -495,7 +498,7 @@ ingest/tests/            <span class="c"># pytest</span></pre>
           </tbody>
         </table>
       </div>
-      <p>索引：<code>geom</code>（GiST）、<code>contents_rights_type</code>。</p>
+      <p>索引：<code>geom</code>（GiST）。</p>
     </section>
     <hr class="section-rule">
 
@@ -612,13 +615,15 @@ pg_restore -d $DATABASE_URL --clean --if-exists backups/nosuri_xxx.dump</pre>
       <p><code>backups/</code> を作ったら <code>.gitignore</code> に追加してください。</p>
 
       <h3>スキーマを変えたとき</h3>
-      <p><code>db/init.sql</code> は <strong>DB 新規作成時に一度しか走りません</strong>。既存 DB に反映するには次のどちらかを取ります。</p>
-<pre><span class="c"># A. 手で当てる（データを残す）</span>
-psql $DATABASE_URL -f db/init.sql
+      <p><code>db/init.sql</code> は冪等で、<code>pg-up</code> が<strong>毎回</strong>適用します。テーブルを新しく足すときは <code>db/</code> に DDL を置き、<code>init.sql</code> に <code>\ir</code> の 1 行を足せば済みます。</p>
+<pre><span class="c"># 手で当てる場合（pg-up と同じことをする）</span>
+psql $DATABASE_URL -f db/init.sql</pre>
+      <p>ただし DDL は全文が <code>CREATE ... IF NOT EXISTS</code> なので、<strong>既存テーブルの形（カラム型・主キー・索引）は変わりません</strong>。作り替えるときは <code>db/migrations/000N_*.sql</code> を追加して手で当て、DDL ファイル側（新規 DB 用の正解）も必ず揃えます。</p>
+<pre><span class="c"># A. マイグレーションを当てる（データを残す）</span>
+psql $DATABASE_URL -f db/migrations/0001_reshape_raw_jps.sql
 
 <span class="c"># B. cluster ごと作り直す（データは破棄）</span>
 pg-down &amp;&amp; rm -rf .local/state/postgres &amp;&amp; pg-up</pre>
-      <p>SQL ファイルが増えてきたら <code>db/migrations/</code> 構成への移行を検討します。</p>
 
       <h3>詰まったとき</h3>
       <details><summary>PostgreSQL に接続できない</summary><pre>tail -50 /tmp/pg.log</pre><p>ポート競合かデータ破損が主因。復旧しなければ cluster をリセットします。</p></details>

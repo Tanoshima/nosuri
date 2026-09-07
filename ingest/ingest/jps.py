@@ -1,8 +1,8 @@
 """JPS (Japan Search) SPARQL fetcher and parser.
 
 Fetches records of a given `type:` (e.g. 史跡) from the public SPARQL endpoint
-and converts each result binding into a dict suitable for upserting into
-the `raw_jps_shiseki` table.
+and groups the result bindings into one dict per subject, suitable for
+upserting into the `raw_jps_shiseki` table.
 """
 from __future__ import annotations
 
@@ -66,29 +66,76 @@ def _v(binding: dict[str, Any], key: str) -> str | None:
     return cell.get("value")
 
 
+_ARRAY_FIELDS = (
+    ("spatial_uris", "spatial"),
+    ("geohash_uris", "geo"),
+    ("temporals", "temporal"),
+    ("image_urls", "image"),
+    ("source_infos", "source"),
+)
+
+
+def _append_binding(row: dict[str, Any], binding: dict[str, Any]) -> None:
+    """Fold one SPARQL binding into an existing row for the same subject."""
+    if not row["name"]:
+        row["name"] = _v(binding, "name") or ""
+    for field, key in _ARRAY_FIELDS:
+        value = _v(binding, key)
+        if value is not None and value not in row[field]:
+            row[field].append(value)
+    row["raw"].append(binding)
+
+
+def _new_row(subject_uri: str, *, jps_type: str) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "subject_uri": subject_uri,
+        "jps_type": jps_type,
+        "name": "",
+        "raw": [],
+    }
+    for field, _ in _ARRAY_FIELDS:
+        row[field] = []
+    return row
+
+
 def parse_bindings(response: dict[str, Any], *, jps_type: str) -> list[dict[str, Any]]:
+    """Group bindings into one row per subject, in the order subjects appear.
+
+    Multi-valued OPTIONALs (several spatial values, several images, ...) arrive
+    as repeated bindings for the same ?s; every value is kept.
+    """
     bindings = response.get("results", {}).get("bindings", [])
-    rows: list[dict[str, Any]] = []
-    seen: set[str] = set()
+    rows: dict[str, dict[str, Any]] = {}
     for b in bindings:
         subject = _v(b, "s")
-        if subject is None or subject in seen:
+        if subject is None:
             continue
-        seen.add(subject)
-        rows.append(
-            {
-                "subject_uri": subject,
-                "jps_type": jps_type,
-                "name": _v(b, "name") or "",
-                "spatial_uri": _v(b, "spatial"),
-                "geohash_uri": _v(b, "geo"),
-                "temporal": _v(b, "temporal"),
-                "image_url": _v(b, "image"),
-                "source_info": _v(b, "source"),
-                "raw": b,
-            }
-        )
-    return rows
+        row = rows.get(subject)
+        if row is None:
+            row = rows[subject] = _new_row(subject, jps_type=jps_type)
+        _append_binding(row, b)
+    return list(rows.values())
+
+
+def copy_row(row: dict[str, Any]) -> dict[str, Any]:
+    """Copy a row deeply enough that merging into it leaves the source alone."""
+    copied = dict(row)
+    copied["raw"] = list(row["raw"])
+    for field, _ in _ARRAY_FIELDS:
+        copied[field] = list(row.get(field) or [])
+    return copied
+
+
+def merge_rows(into: dict[str, Any], other: dict[str, Any]) -> dict[str, Any]:
+    """Merge `other` into `into` (same subject); returns `into`."""
+    if not into["name"]:
+        into["name"] = other["name"]
+    for field, _ in _ARRAY_FIELDS:
+        for value in other[field]:
+            if value not in into[field]:
+                into[field].append(value)
+    into["raw"].extend(other["raw"])
+    return into
 
 
 def iter_rows(
@@ -98,9 +145,10 @@ def iter_rows(
     endpoint: str = SPARQL_ENDPOINT,
     sleep_between: float = 0.0,
 ) -> Iterator[dict[str, Any]]:
-    # Multi-valued OPTIONAL bindings (e.g. multiple spatial values) can make
-    # the same ?s span page boundaries, so dedupe across the whole run too.
-    yielded: set[str] = set()
+    # ORDER BY ?s keeps a subject's bindings adjacent, but a subject with
+    # several bindings can still straddle a page boundary — hold the last row
+    # of each page back and merge it with the next page's first row.
+    pending: dict[str, Any] | None = None
     offset = 0
     while True:
         response = fetch_page(
@@ -108,14 +156,19 @@ def iter_rows(
         )
         bindings = response.get("results", {}).get("bindings", [])
         if not bindings:
-            return
+            break
         for row in parse_bindings(response, jps_type=jps_type):
-            if row["subject_uri"] in yielded:
-                continue
-            yielded.add(row["subject_uri"])
-            yield row
+            if pending is None:
+                pending = row
+            elif pending["subject_uri"] == row["subject_uri"]:
+                merge_rows(pending, row)
+            else:
+                yield pending
+                pending = row
         if len(bindings) < page_size:
-            return
+            break
         offset += page_size
         if sleep_between > 0:
             time.sleep(sleep_between)
+    if pending is not None:
+        yield pending

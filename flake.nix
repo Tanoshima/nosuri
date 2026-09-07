@@ -47,9 +47,11 @@
                 "SELECT 1 FROM pg_database WHERE datname='$PGDATABASE'" \
                 | grep -q 1; then
               createdb -h "$PGHOST" -U "$PGUSER" "$PGDATABASE"
-              if [ -f db/init.sql ]; then
-                psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" -f db/init.sql
-              fi
+            fi
+            # Idempotent, so apply it on every start — not just on DB creation.
+            if [ -f db/init.sql ]; then
+              psql -h "$PGHOST" -U "$PGUSER" -d "$PGDATABASE" \
+                -v ON_ERROR_STOP=1 -q -f db/init.sql
             fi
           '';
 

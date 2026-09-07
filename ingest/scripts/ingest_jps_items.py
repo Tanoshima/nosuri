@@ -37,10 +37,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def load_subject_uris(conn, *, refresh: bool, limit: int | None) -> list[str]:
     """Load all target subject_uris up front — commit() invalidates server-side cursors."""
     if refresh:
-        sql = "SELECT subject_uri FROM raw_jps_shiseki ORDER BY subject_uri"
+        sql = "SELECT DISTINCT subject_uri FROM raw_jps_shiseki ORDER BY subject_uri"
     else:
         sql = (
-            "SELECT s.subject_uri FROM raw_jps_shiseki s "
+            "SELECT DISTINCT s.subject_uri FROM raw_jps_shiseki s "
             "LEFT JOIN raw_jps_item_api a USING (subject_uri) "
             "WHERE a.subject_uri IS NULL "
             "ORDER BY s.subject_uri"

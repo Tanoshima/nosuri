@@ -32,7 +32,10 @@ The development environment is fully reproducible via a devcontainer powered by 
 .devcontainer/postCreate.sh       # Installs nix-direnv, wires direnv hook
 flake.nix                         # Dev shell + pg-up / pg-down scripts
 .envrc                            # `use flake` + PATH_add bin
-db/init.sql                       # PostGIS extension setup (shared, language-agnostic)
+db/init.sql                       # Schema entry point: extensions + table DDL (idempotent)
+db/raw_jps_shiseki.sql            # raw table DDL (JPS SPARQL)
+db/raw_jps_item_api.sql           # raw table DDL (JPS item API)
+db/migrations/                    # One-off reshapes of existing tables
 ingest/pyproject.toml             # Python project + dependencies (managed by uv)
 ingest/uv.lock                    # uv lockfile (committed for reproducibility)
 ingest/ingest/                    # Python package (DB helpers, JPS clients)

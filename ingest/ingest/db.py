@@ -6,26 +6,26 @@ from typing import Any
 
 import psycopg2.extras
 
+from . import jps
+
 
 _INSERT_SQL = """
 INSERT INTO raw_jps_shiseki
-    (subject_uri, jps_type, name, spatial_uri, geohash_uri,
-     temporal, image_url, link_url, source_info, raw, fetched_at)
+    (subject_uri, jps_type, name, spatial_uris, geohash_uris,
+     temporals, image_urls, source_infos, raw, fetched_at)
 VALUES %s
-ON CONFLICT (subject_uri) DO UPDATE SET
-    jps_type    = EXCLUDED.jps_type,
-    name        = EXCLUDED.name,
-    spatial_uri = EXCLUDED.spatial_uri,
-    geohash_uri = EXCLUDED.geohash_uri,
-    temporal    = EXCLUDED.temporal,
-    image_url   = EXCLUDED.image_url,
-    link_url    = EXCLUDED.link_url,
-    source_info = EXCLUDED.source_info,
-    raw         = EXCLUDED.raw,
-    fetched_at  = EXCLUDED.fetched_at
+ON CONFLICT (subject_uri, jps_type) DO UPDATE SET
+    name         = EXCLUDED.name,
+    spatial_uris = EXCLUDED.spatial_uris,
+    geohash_uris = EXCLUDED.geohash_uris,
+    temporals    = EXCLUDED.temporals,
+    image_urls   = EXCLUDED.image_urls,
+    source_infos = EXCLUDED.source_infos,
+    raw          = EXCLUDED.raw,
+    fetched_at   = EXCLUDED.fetched_at
 """
 
-_TEMPLATE = "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now())"
+_TEMPLATE = "(%s, %s, %s, %s, %s, %s, %s, %s, %s, now())"
 
 _ITEM_INSERT_SQL = """
 INSERT INTO raw_jps_item_api
@@ -52,12 +52,29 @@ def _as_jsonb(value: Any) -> psycopg2.extras.Json | None:
     return psycopg2.extras.Json(value) if value is not None else None
 
 
+def _merge_duplicate_keys(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Collapse rows sharing a (subject_uri, jps_type) key.
+
+    A single INSERT cannot touch the same key twice, and the endpoint may
+    repeat a subject if it ever returns bindings out of ?s order.
+    """
+    merged: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in rows:
+        key = (row["subject_uri"], row["jps_type"])
+        seen = merged.get(key)
+        if seen is None:
+            merged[key] = jps.copy_row(row)
+        else:
+            jps.merge_rows(seen, row)
+    return list(merged.values())
+
+
 def upsert_rows(conn, rows: Iterable[dict[str, Any]]) -> int:
     """UPSERT a batch of rows into raw_jps_shiseki. Returns count submitted.
 
     The caller controls the transaction (commit/rollback).
     """
-    rows = list(rows)
+    rows = _merge_duplicate_keys(list(rows))
     if not rows:
         return 0
 
@@ -66,12 +83,11 @@ def upsert_rows(conn, rows: Iterable[dict[str, Any]]) -> int:
             r["subject_uri"],
             r["jps_type"],
             r["name"],
-            r.get("spatial_uri"),
-            r.get("geohash_uri"),
-            r.get("temporal"),
-            r.get("image_url"),
-            r.get("link_url"),
-            _as_jsonb(r.get("source_info")),
+            r.get("spatial_uris") or [],
+            r.get("geohash_uris") or [],
+            r.get("temporals") or [],
+            r.get("image_urls") or [],
+            r.get("source_infos") or [],
             _as_jsonb(r["raw"]),
         )
         for r in rows
